@@ -5,15 +5,27 @@
 """Routine that updates secrets in Spark service accounts."""
 
 import argparse
+import logging
+import os
+import sys
 from typing import Dict, Optional
 
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Secret, ServiceAccount
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] (%(threadName)s) (%(funcName)s) %(message)s",
+)
+
 
 def read_configuration_file(file_path: str) -> Optional[Dict[str, str]]:
     """Read spark configuration file."""
+    if not os.path.exists(file_path):
+        return None
     with open(file_path, "r") as f:
         lines = f.readlines()
         confs = {}
@@ -25,7 +37,10 @@ def read_configuration_file(file_path: str) -> Optional[Dict[str, str]]:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Handler for running a Kafka client")
+    logger.info("Start process")
+    parser = argparse.ArgumentParser(
+        description="Handler for running a Python scripts that pushes "
+    )
     parser.add_argument(
         "-a",
         "--app-name",
@@ -41,42 +56,44 @@ if __name__ == "__main__":
         type=str,
     )
     args = parser.parse_args()
+    logger.info("Start service account updater.")
     client = Client(field_manager=args.app_name)  # type: ignore
     label_selector = {"app.kubernetes.io/managed-by": "spark8t"}
 
     for op, sa in client.watch(ServiceAccount, namespace="*", labels=label_selector):
-        print(f"Operation: {op}")
-        print(f"Service Account: {sa}")
+        logger.info(f"Operation: {op}")
+        logger.info(f"Service Account: {sa}")
         sa_name = sa.metadata.name
         namespace = sa.metadata.namespace
-        print(f"Name: {sa_name} --- namespace: {namespace}")
+        logger.info(f"Name: {sa_name} --- namespace: {namespace}")
         #
         #
         options = read_configuration_file(args.config)
         if options:
-            try:
-                s = client.get(
-                    Secret, name=f"configuration-hub-conf-{sa_name}", namespace=namespace
-                )
-                print(f"retrieved secrets: {s}")
-                client.delete(
-                    Secret, name=f"configuration-hub-conf-{sa_name}", namespace=namespace
-                )
-            except ApiError:
-                pass
-            print("HERE")
-            s = Secret.from_dict(
-                {
-                    "apiVersion": "v1",
-                    "kind": "Secret",
-                    "metadata": {
-                        "name": f"configuration-hub-conf-{sa_name}",
-                        "namespace": namespace,
-                    },
-                    "stringData": options,
-                }
-            )
-            client.create(s)
+            logger.info(f"Number of options: {len(options)}")
+        else:
+            logger.info("Empty configuration. No secret to update.")
+
+        secret_name = f"configuration-hub-conf-{sa_name}"
+        try:
+            s = client.get(Secret, name=secret_name, namespace=namespace)
+            print(f"retrieved secrets: {s}")
+            client.delete(Secret, name=secret_name, namespace=namespace)
+        except ApiError:
+            pass
+        logger.info(f"Updating secret: {secret_name}")
+        s = Secret.from_dict(
+            {
+                "apiVersion": "v1",
+                "kind": "Secret",
+                "metadata": {
+                    "name": secret_name,
+                    "namespace": namespace,
+                },
+                "stringData": options if options else {},
+            }
+        )
+        client.create(s)
 
         #
-        print("--------------------------------------------------------")
+        logger.info("--------------------------------------------------------")

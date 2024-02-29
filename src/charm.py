@@ -111,10 +111,9 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
 
         if status is not Status.ACTIVE.value:
             self.logger.info(f"Cannot start service because of status {status}")
-            if pid := self.get_peer_data("pid"):
-                self._stop_process(int(pid))
             return False
-
+        if pid := self.get_peer_data("pid"):
+            self._stop_process(int(pid))
         self._start_process()
         return True
 
@@ -155,6 +154,7 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
             stderr=open(f"/tmp/{t0}_monitor_sa.err", "w"),
         )
         self.set_peer_data(key="pid", data=str(process.pid))
+        self.logger.info(f"START PROCESS: {process.pid}")
         return process.pid
 
     def _stop_process(self, pid: int):

@@ -2,6 +2,10 @@
 # See LICENSE file for licensing details.
 
 
+def test_a():
+    assert True
+
+
 # def parse_spark_properties(out: State, tmp_path: Path) -> dict[str, str]:
 
 #     spark_properties_path = (

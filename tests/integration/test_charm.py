@@ -4,10 +4,8 @@
 
 
 import asyncio
-import json
 import logging
 import subprocess
-import urllib.request
 from pathlib import Path
 from time import sleep
 
@@ -16,7 +14,6 @@ import pytest
 import yaml
 from botocore.client import Config
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from .test_helpers import fetch_action_sync_s3_credentials
 
@@ -24,12 +21,10 @@ logger = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-BUCKET_NAME = "history-server"
+BUCKET_NAME = "test-bucket"
 
 
-def setup_s3_bucket_for_history_server(
-    endpoint_url: str, aws_access_key: str, aws_secret_key: str
-):
+def setup_s3_bucket_for_sch_server(endpoint_url: str, aws_access_key: str, aws_secret_key: str):
     config = Config(connect_timeout=60, retries={"max_attempts": 0})
     session = boto3.session.Session(
         aws_access_key_id=aws_access_key, aws_secret_access_key=aws_secret_key
@@ -91,7 +86,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
         f"Setting up s3 bucket with endpoint_url={endpoint_url}, access_key={access_key}, secret_key={secret_key}"
     )
 
-    setup_s3_bucket_for_history_server(endpoint_url, access_key, secret_key)
+    setup_s3_bucket_for_sch_server(endpoint_url, access_key, secret_key)
 
     logger.info("Bucket setup complete")
 
@@ -100,13 +95,9 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
 
     charm = await ops_test.build_charm(".")
 
-    image_version = METADATA["resources"]["spark-history-server-image"]["upstream-source"]
+    resources = {}
 
-    logger.info(f"Image version: {image_version}")
-
-    resources = {"spark-history-server-image": image_version}
-
-    logger.info("Deploying charm")
+    logger.info("Deploying Spark Configuration hub charm")
 
     # Deploy the charm and wait for waiting status
     await asyncio.gather(
@@ -133,7 +124,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
         )
 
     configuration_parameters = {
-        "bucket": "history-server",
+        "bucket": BUCKET_NAME,
         "path": "spark-events",
         "endpoint": endpoint_url,
     }
@@ -142,7 +133,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
         configuration_parameters
     )
 
-    logger.info("Relating history server charm with s3-integrator charm")
+    logger.info("Relating spark configuration hub charm with s3-integrator charm")
 
     await ops_test.model.add_relation(charm_versions.s3.application_name, APP_NAME)
 
@@ -157,250 +148,58 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
         timeout=1000,
     )
 
-    logger.info("Verifying history server has no app entries")
+    # wait
 
-    status = await ops_test.model.get_status()
-    address = status["applications"][APP_NAME]["units"][f"{APP_NAME}/0"]["address"]
+    # add sa and check no secret in namespace.
 
-    apps = json.loads(urllib.request.urlopen(f"http://{address}:18080/api/v1/applications").read())
+    # check secret contains s3 keys
 
-    assert len(apps) == 0
+    # add new sa and check secrets
 
-    logger.info("Setting up spark")
+    # remove relation and check the update of secrets
 
-    setup_spark_output = subprocess.check_output(
-        f"./tests/integration/setup/setup_spark.sh {endpoint_url} {access_key} {secret_key}",
-        shell=True,
-        stderr=None,
-    ).decode("utf-8")
+    # run Spark Job with spark-client (later step)
 
-    logger.info(f"Setup spark output:\n{setup_spark_output}")
+    # logger.info("Verifying history server has no app entries")
 
-    logger.info("Executing Spark job")
+    # status = await ops_test.model.get_status()
+    # address = status["applications"][APP_NAME]["units"][f"{APP_NAME}/0"]["address"]
 
-    run_spark_output = subprocess.check_output(
-        "./tests/integration/setup/run_spark_job.sh", shell=True, stderr=None
-    ).decode("utf-8")
+    # apps = json.loads(urllib.request.urlopen(f"http://{address}:18080/api/v1/applications").read())
 
-    logger.info(f"Run spark output:\n{run_spark_output}")
+    # assert len(apps) == 0
 
-    logger.info("Verifying history server has 1 app entry")
+    # logger.info("Setting up spark")
 
-    for i in range(0, 5):
-        try:
-            apps = json.loads(
-                urllib.request.urlopen(f"http://{address}:18080/api/v1/applications").read()
-            )
-        except Exception:
-            apps = []
+    # setup_spark_output = subprocess.check_output(
+    #     f"./tests/integration/setup/setup_spark.sh {endpoint_url} {access_key} {secret_key}",
+    #     shell=True,
+    #     stderr=None,
+    # ).decode("utf-8")
 
-        if len(apps) > 0:
-            break
-        else:
-            sleep(3)
+    # logger.info(f"Setup spark output:\n{setup_spark_output}")
 
-    assert len(apps) == 1
+    # logger.info("Executing Spark job")
 
+    # run_spark_output = subprocess.check_output(
+    #     "./tests/integration/setup/run_spark_job.sh", shell=True, stderr=None
+    # ).decode("utf-8")
 
-@pytest.mark.abort_on_fail
-async def test_ingress(ops_test: OpsTest, charm_versions):
-    """Build the charm-under-test and deploy it together with related charms.
+    # logger.info(f"Run spark output:\n{run_spark_output}")
 
-    Assert on the unit status before any relations/configurations take place.
-    """
-    # Deploy the charm and wait for waiting status
-    _ = await ops_test.model.deploy(**charm_versions.ingress.deploy_dict())
+    # logger.info("Verifying history server has 1 app entry")
 
-    await ops_test.model.wait_for_idle(
-        apps=[charm_versions.ingress.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
+    # for i in range(0, 5):
+    #     try:
+    #         apps = json.loads(
+    #             urllib.request.urlopen(f"http://{address}:18080/api/v1/applications").read()
+    #         )
+    #     except Exception:
+    #         apps = []
 
-    logger.info("Relating history server charm with ingress")
+    #     if len(apps) > 0:
+    #         break
+    #     else:
+    #         sleep(3)
 
-    await ops_test.model.add_relation(charm_versions.ingress.application_name, APP_NAME)
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME, charm_versions.ingress.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-
-    action = await ops_test.model.units.get(
-        f"{charm_versions.ingress.application_name}/0"
-    ).run_action(
-        "show-proxied-endpoints",
-    )
-
-    ingress_endpoint = json.loads((await action.wait()).results["proxied-endpoints"])[APP_NAME][
-        "url"
-    ]
-
-    logger.info(f"Querying endpoint: {ingress_endpoint}/api/v1/applications")
-
-    apps = json.loads(urllib.request.urlopen(f"{ingress_endpoint}/api/v1/applications").read())
-
-    assert len(apps) == 1
-
-    logger.info(f"Number of apps: {len(apps)}")
-
-
-@pytest.mark.abort_on_fail
-async def test_oathkeeper(ops_test: OpsTest, charm_versions):
-    """Test the integration of the spark history server with Oathkeeper.
-
-    Assert that the proxied-enpoints of the ingress are protected (err code 401).
-    """
-    # remove relation between ingress and spark-history server
-    await ops_test.model.applications[APP_NAME].remove_relation(
-        f"{APP_NAME}:ingress", f"{charm_versions.ingress.application_name}:ingress"
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME, charm_versions.ingress.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-
-    # Deploy the oathkeeper charm and wait for waiting status
-    _ = await ops_test.model.deploy(**charm_versions.oathkeeper.deploy_dict(), trust=True)
-
-    await ops_test.model.wait_for_idle(
-        apps=[charm_versions.oathkeeper.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-
-    # configure Oathkeeper charm
-    oathkeeper_configuration_parameters = {"dev": "True"}
-    await ops_test.model.applications[charm_versions.oathkeeper.application_name].set_config(
-        oathkeeper_configuration_parameters
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[charm_versions.oathkeeper.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-    # configure ingress to work with Oathkeeper
-    ingress_configuration_parameters = {"enable_experimental_forward_auth": "True"}
-    # apply new configuration options
-    await ops_test.model.applications[charm_versions.ingress.application_name].set_config(
-        ingress_configuration_parameters
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[charm_versions.ingress.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-    # Relate Oathkeeper with the Spark history server charm
-    logger.info("Relating the spark history server charm with oathkeeper.")
-    await ops_test.model.add_relation(charm_versions.oathkeeper.application_name, APP_NAME)
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="blocked",
-        timeout=300,
-        idle_period=30,
-    )
-    # relate spark-history-server and ingress
-    await ops_test.model.add_relation(charm_versions.ingress.application_name, APP_NAME)
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME, charm_versions.ingress.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-
-    # Relate Oathkeeper with the Ingress charm
-    logger.info("Relating the oathkeeper charm with the ingress.")
-    await ops_test.model.add_relation(
-        f"{charm_versions.ingress.application_name}:experimental-forward-auth",
-        charm_versions.oathkeeper.application_name,
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[charm_versions.oathkeeper.application_name, charm_versions.ingress.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-
-    # get proxied endpoint
-    action = await ops_test.model.units.get(
-        f"{charm_versions.ingress.application_name}/0"
-    ).run_action(
-        "show-proxied-endpoints",
-    )
-
-    ingress_endpoint = json.loads((await action.wait()).results["proxied-endpoints"])[APP_NAME][
-        "url"
-    ]
-
-    # check that the ingress endpoint is not authorized!
-    logger.info(f"Querying endpoint: {ingress_endpoint}")
-    try:
-        _ = urllib.request.urlopen(ingress_endpoint)
-        raise Exception(
-            "Successful request.... something is wrong with the protection of the endpoints."
-        )
-    except urllib.error.HTTPError as e:  # type: ignore
-        # Return code error (e.g. 404, 501, ...)
-        logger.info("HTTPError: {}".format(e.code))
-        # check that the endopoint respond with code 401
-        assert e.code == 401
-
-    logger.info(f"Endpoint: {ingress_endpoint} successfully protected.")
-
-
-@pytest.mark.skip
-async def test_remove_oathkeeper(ops_test: OpsTest, charm_versions):
-    """Test the removal of integration between the spark history server and Oathkeeper.
-
-    Assert that the proxied-enpoints of the ingress are not protected.
-    """
-    # Remove of the relation between oathkeeper and spark-history server
-    await ops_test.model.applications[APP_NAME].remove_relation(
-        f"{APP_NAME}:auth-proxy", f"{charm_versions.oathkeeper.application_name}:auth-proxy"
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME, charm_versions.oathkeeper.application_name],
-        status="active",
-        timeout=300,
-        idle_period=30,
-    )
-
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(30)):
-            with attempt:
-                action = await ops_test.model.units.get(
-                    f"{charm_versions.ingress.application_name}/0"
-                ).run_action(
-                    "show-proxied-endpoints",
-                )
-
-                ingress_endpoint = json.loads((await action.wait()).results["proxied-endpoints"])[
-                    APP_NAME
-                ]["url"]
-
-                logger.info(f"Trying to querying endpoint: {ingress_endpoint}/api/v1/applications")
-
-                apps = json.loads(
-                    urllib.request.urlopen(f"{ingress_endpoint}/api/v1/applications").read()
-                )
-
-                assert len(apps) == 1
-
-                logger.info(f"Number of apps: {len(apps)}")
-    except RetryError:
-        raise Exception("Failed to reach the endpoint!")
+    # assert len(apps) == 1
