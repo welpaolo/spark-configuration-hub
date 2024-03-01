@@ -60,10 +60,15 @@ def get_secret_data(namespace: str, secret_name: str):
         output = subprocess.run(command, check=True, capture_output=True)
         # output.stdout.decode(), output.stderr.decode(), output.returncode
         result = output.stdout.decode()
+        logger.info(f"Command: {command}")
+        logger.info(f"Secrets for namespace: {namespace}")
+        logger.info(f"Request secret: {secret_name}")
+        logger.info(f"results: {str(result)}")
         secrets = json.loads(result)
         data = {}
         for secret in secrets["items"]:
             name = secret["metadata"]["name"]
+            logger.info(f"\t secretName: {name}")
             if name == secret_name:
                 data = secret["data"]
         return data
@@ -83,6 +88,7 @@ def service_account(namespace):
         "--namespace",
         namespace,
     )
+    logger.info(f"Service account: {username} created in namespace: {namespace}")
     return username, namespace
 
 
@@ -165,7 +171,12 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
     await asyncio.gather(
         ops_test.model.deploy(**charm_versions.s3.deploy_dict()),
         ops_test.model.deploy(
-            charm, resources=resources, application_name=APP_NAME, num_units=1, series="jammy"
+            charm,
+            resources=resources,
+            application_name=APP_NAME,
+            num_units=1,
+            series="jammy",
+            trust=True,
         ),
     )
 
@@ -197,13 +208,14 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
 
 
 @pytest.mark.abort_on_fail
-async def a(ops_test: OpsTest, charm_versions, namespace, service_account):
+async def test_relation_to_s3(ops_test: OpsTest, charm_versions, namespace, service_account):
 
     logger.info("Relating spark configuration hub charm with s3-integrator charm")
-
+    service_account_name = service_account[0]
     secret_data = get_secret_data(
-        namespace=namespace, secret_name=f"SECRET_NAME_PREFIX{service_account}"
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
     )
+    logger.info(f"namespace: {namespace} -> secret_data: {secret_data}")
     assert len(secret_data) == 0
 
     await ops_test.model.add_relation(charm_versions.s3.application_name, APP_NAME)
@@ -219,22 +231,27 @@ async def a(ops_test: OpsTest, charm_versions, namespace, service_account):
         timeout=1000,
     )
 
+    # wait for secret update
+    logger.info("Wait for secret update.")
+    sleep(10)
+
     secret_data = get_secret_data(
-        namespace=namespace, secret_name=f"SECRET_NAME_PREFIX{service_account}"
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
     )
+    logger.info(f"namespace: {namespace} -> secret_data: {secret_data}")
     assert len(secret_data) > 0
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
 
 
 @pytest.mark.abort_on_fail
-async def add_new_service_account(ops_test: OpsTest, namespace, service_account):
-
+async def test_add_new_service_account(ops_test: OpsTest, namespace, service_account):
+    service_account_name = service_account[0]
     # wait for the update of secres
     sleep(5)
     # check secret
 
     secret_data = get_secret_data(
-        namespace=namespace, secret_name=f"SECRET_NAME_PREFIX{service_account}"
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
     )
     assert len(secret_data) > 0
     assert "spark.hadoop.fs.s3a.access.key" in secret_data

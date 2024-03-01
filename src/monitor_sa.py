@@ -56,18 +56,17 @@ if __name__ == "__main__":
         type=str,
     )
     args = parser.parse_args()
-    logger.info("Start service account updater.")
+    logger.info("Start process that update service account secrets.")
     client = Client(field_manager=args.app_name)  # type: ignore
     label_selector = {"app.kubernetes.io/managed-by": "spark8t"}
 
     for op, sa in client.watch(ServiceAccount, namespace="*", labels=label_selector):
-        logger.info(f"Operation: {op}")
-        logger.info(f"Service Account: {sa}")
         sa_name = sa.metadata.name
         namespace = sa.metadata.namespace
-        logger.info(f"Name: {sa_name} --- namespace: {namespace}")
-        #
-        #
+        logger.info(f"Operation: {op}")
+        logger.info(f"Service account: {sa_name} --- namespace: {namespace}")
+        # skip in case of deletion or operation that do not need secret update.
+
         options = read_configuration_file(args.config)
         if options:
             logger.info(f"Number of options: {len(options)}")
@@ -75,12 +74,18 @@ if __name__ == "__main__":
             logger.info("Empty configuration. No secret to update.")
 
         secret_name = f"configuration-hub-conf-{sa_name}"
+        # if secret is already there, delete it.
         try:
             s = client.get(Secret, name=secret_name, namespace=namespace)
             print(f"retrieved secrets: {s}")
             client.delete(Secret, name=secret_name, namespace=namespace)
-        except ApiError:
-            pass
+        except ApiError as e:
+            logger.info(f"Api error: {e}")
+
+        if op != "ADDED":
+            logger.info(f"Operation: {op} is skipped!")
+            continue
+
         logger.info(f"Updating secret: {secret_name}")
         s = Secret.from_dict(
             {
@@ -93,7 +98,6 @@ if __name__ == "__main__":
                 "stringData": options if options else {},
             }
         )
+        # Create secret
         client.create(s)
-
-        #
         logger.info("--------------------------------------------------------")

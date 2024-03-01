@@ -9,6 +9,10 @@ parts:
     build-packages:
       - rustc
       - cargo
+      - git
+      - libffi-dev
+      - libssl-dev
+      - pkg-config
 bases:
   - build-on:
     - name: ubuntu
