@@ -4,8 +4,10 @@
 
 
 import asyncio
+import json
 import logging
 import subprocess
+import uuid
 from pathlib import Path
 from time import sleep
 
@@ -22,6 +24,66 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 BUCKET_NAME = "test-bucket"
+SECRET_NAME_PREFIX = "configuration-hub-conf-"
+
+
+@pytest.fixture
+def namespace():
+    """A temporary K8S namespace gets cleaned up automatically."""
+    namespace_name = str(uuid.uuid4())
+    create_command = ["kubectl", "create", "namespace", namespace_name]
+    subprocess.run(create_command, check=True)
+    yield namespace_name
+    destroy_command = ["kubectl", "delete", "namespace", namespace_name]
+    subprocess.run(destroy_command, check=True)
+
+
+def run_service_account_registry(*args):
+    """Run service_account_registry CLI command with given set of args.
+
+    Returns:
+        Tuple: A tuple with the content of stdout, stderr and the return code
+            obtained when the command is run.
+    """
+    command = ["python3", "-m", "spark8t.cli.service_account_registry", *args]
+    try:
+        output = subprocess.run(command, check=True, capture_output=True)
+        return output.stdout.decode(), output.stderr.decode(), output.returncode
+    except subprocess.CalledProcessError as e:
+        return e.stdout.decode(), e.stderr.decode(), e.returncode
+
+
+def get_secret_data(namespace: str, secret_name: str):
+    """Retrieve secret data for a given namespace and secret."""
+    command = ["kubectl", "get", "secret", "-n", namespace, "--output", "json"]
+    try:
+        output = subprocess.run(command, check=True, capture_output=True)
+        # output.stdout.decode(), output.stderr.decode(), output.returncode
+        result = output.stdout.decode()
+        secrets = json.loads(result)
+        data = {}
+        for secret in secrets["items"]:
+            name = secret["metadata"]["name"]
+            if name == secret_name:
+                data = secret["data"]
+        return data
+    except subprocess.CalledProcessError as e:
+        return e.stdout.decode(), e.stderr.decode(), e.returncode
+
+
+@pytest.fixture()
+def service_account(namespace):
+    """A temporary service account that gets cleaned up automatically."""
+    username = str(uuid.uuid4())
+
+    run_service_account_registry(
+        "create",
+        "--username",
+        username,
+        "--namespace",
+        namespace,
+    )
+    return username, namespace
 
 
 def setup_s3_bucket_for_sch_server(endpoint_url: str, aws_access_key: str, aws_secret_key: str):
@@ -133,7 +195,16 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
         configuration_parameters
     )
 
+
+@pytest.mark.abort_on_fail
+async def a(ops_test: OpsTest, charm_versions, namespace, service_account):
+
     logger.info("Relating spark configuration hub charm with s3-integrator charm")
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"SECRET_NAME_PREFIX{service_account}"
+    )
+    assert len(secret_data) == 0
 
     await ops_test.model.add_relation(charm_versions.s3.application_name, APP_NAME)
 
@@ -148,7 +219,25 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
         timeout=1000,
     )
 
-    # wait
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"SECRET_NAME_PREFIX{service_account}"
+    )
+    assert len(secret_data) > 0
+    assert "spark.hadoop.fs.s3a.access.key" in secret_data
+
+
+@pytest.mark.abort_on_fail
+async def add_new_service_account(ops_test: OpsTest, namespace, service_account):
+
+    # wait for the update of secres
+    sleep(5)
+    # check secret
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"SECRET_NAME_PREFIX{service_account}"
+    )
+    assert len(secret_data) > 0
+    assert "spark.hadoop.fs.s3a.access.key" in secret_data
 
     # add sa and check no secret in namespace.
 
@@ -156,50 +245,10 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
 
     # add new sa and check secrets
 
+
+@pytest.mark.abort_on_fail
+async def remove_s3_relation(ops_test: OpsTest):
+    pass
     # remove relation and check the update of secrets
 
     # run Spark Job with spark-client (later step)
-
-    # logger.info("Verifying history server has no app entries")
-
-    # status = await ops_test.model.get_status()
-    # address = status["applications"][APP_NAME]["units"][f"{APP_NAME}/0"]["address"]
-
-    # apps = json.loads(urllib.request.urlopen(f"http://{address}:18080/api/v1/applications").read())
-
-    # assert len(apps) == 0
-
-    # logger.info("Setting up spark")
-
-    # setup_spark_output = subprocess.check_output(
-    #     f"./tests/integration/setup/setup_spark.sh {endpoint_url} {access_key} {secret_key}",
-    #     shell=True,
-    #     stderr=None,
-    # ).decode("utf-8")
-
-    # logger.info(f"Setup spark output:\n{setup_spark_output}")
-
-    # logger.info("Executing Spark job")
-
-    # run_spark_output = subprocess.check_output(
-    #     "./tests/integration/setup/run_spark_job.sh", shell=True, stderr=None
-    # ).decode("utf-8")
-
-    # logger.info(f"Run spark output:\n{run_spark_output}")
-
-    # logger.info("Verifying history server has 1 app entry")
-
-    # for i in range(0, 5):
-    #     try:
-    #         apps = json.loads(
-    #             urllib.request.urlopen(f"http://{address}:18080/api/v1/applications").read()
-    #         )
-    #     except Exception:
-    #         apps = []
-
-    #     if len(apps) > 0:
-    #         break
-    #     else:
-    #         sleep(3)
-
-    # assert len(apps) == 1
