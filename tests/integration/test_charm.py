@@ -246,6 +246,7 @@ async def test_relation_to_s3(ops_test: OpsTest, charm_versions, namespace, serv
 @pytest.mark.abort_on_fail
 async def test_add_new_service_account(ops_test: OpsTest, namespace, service_account):
     service_account_name = service_account[0]
+
     # wait for the update of secres
     sleep(5)
     # check secret
@@ -255,17 +256,3 @@ async def test_add_new_service_account(ops_test: OpsTest, namespace, service_acc
     )
     assert len(secret_data) > 0
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
-
-    # add sa and check no secret in namespace.
-
-    # check secret contains s3 keys
-
-    # add new sa and check secrets
-
-
-@pytest.mark.abort_on_fail
-async def remove_s3_relation(ops_test: OpsTest):
-    pass
-    # remove relation and check the update of secrets
-
-    # run Spark Job with spark-client (later step)
