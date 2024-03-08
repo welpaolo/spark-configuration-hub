@@ -63,7 +63,7 @@ class Status(Enum):
     """Class bundling all statuses that the charm may fall into."""
 
     INSTALL = MaintenanceStatus("Installing...")
+    MISSING_PERMISSIONS = BlockedStatus("Charm needs to be deploy with --trust")
     MISSING_S3_RELATION = BlockedStatus("Missing S3 relation")
     INVALID_CREDENTIALS = BlockedStatus("Invalid S3 credentials")
-    MISSING_INGRESS_RELATION = BlockedStatus("Missing INGRESS relation")
     ACTIVE = ActiveStatus("")

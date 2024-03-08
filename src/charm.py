@@ -14,6 +14,9 @@ from charms.data_platform_libs.v0.s3 import (
     CredentialsGoneEvent,
     S3Requirer,
 )
+from lightkube.core.client import Client
+from lightkube.core.exceptions import ApiError
+from lightkube.resources.core_v1 import ServiceAccount
 from ops.charm import CharmBase, ConfigChangedEvent, InstallEvent
 from ops.main import main
 from ops.model import StatusBase
@@ -44,6 +47,7 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
         self.framework.observe(self.s3_requirer.on.credentials_gone, self._on_s3_credential_gone)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.client = Client(field_manager=self.model.app.name)
 
     @property
     def peers(self):
@@ -65,6 +69,15 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
         return data if data else None
 
     @property
+    def k8s_permissions(self) -> bool:
+        """Check if the charm has the permission to inspect other namespaces."""
+        try:
+            _ = self.client.list(ServiceAccount, namespace="*")
+            return True
+        except ApiError:
+            return False
+
+    @property
     def s3_connection_info(self) -> Optional[S3ConnectionInfo]:
         """Parse a S3ConnectionInfo object from relation data."""
         if not self.s3_requirer.relations:
@@ -81,6 +94,9 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
         s3: Optional[S3ConnectionInfo],
     ) -> StatusBase:
         """Compute and return the status of the charm."""
+        if not self.k8s_permissions:
+            return Status.MISSING_PERMISSIONS.value
+
         if not s3:
             return Status.MISSING_S3_RELATION.value
 
@@ -94,13 +110,6 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
         status = self.log_result(lambda _: f"Status: {_}")(self.get_status(s3))
 
         self.unit.status = status
-
-        # write configuration to peer relation databag
-
-        # compare it to avoid unnecessary updates
-
-        # write to configuration file
-
         spark_config = SparkConfigurationHubConfig(s3)
         self.logger.info(f"Current configuration: {spark_config.contents}")
         # fid.write(spark_config.contents)
