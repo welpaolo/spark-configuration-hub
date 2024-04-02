@@ -66,6 +66,7 @@ optional = true
 
 [tool.poetry.group.integration.dependencies]
 pytest = ">=7.2"
+pydantic ="^1.10.7"
 juju = "^3.1.6"
 coverage = {extras = ["toml"], version = ">7.0"}
 pytest-operator = ">0.20"
