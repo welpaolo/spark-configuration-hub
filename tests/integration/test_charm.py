@@ -70,7 +70,9 @@ def get_secret_data(namespace: str, secret_name: str):
             name = secret["metadata"]["name"]
             logger.info(f"\t secretName: {name}")
             if name == secret_name:
-                data = secret["data"]
+                data = {}
+                if "data" in secret:
+                    data = secret["data"]
         return data
     except subprocess.CalledProcessError as e:
         return e.stdout.decode(), e.stderr.decode(), e.returncode
