@@ -1,9 +1,2 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-options:
-  log-level:
-    description: |
-      Configures the log level.
-    default: "info"
-    type: string

@@ -31,7 +31,6 @@ authors = []
 [tool.poetry.dependencies]
 python = ">=3.8,<4.0"
 ops = ">=2.4.1"
-pydantic ="^1.10.7"
 pyyaml = "^6.0.1"
 boto3 = "^1.26.75"
 jsonschema = "^4.19.1"

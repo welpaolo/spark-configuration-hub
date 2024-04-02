@@ -97,10 +97,7 @@ class SparkConfigurationHubCharm(CharmBase, WithLogging):
         if not self.k8s_permissions:
             return Status.MISSING_PERMISSIONS.value
 
-        if not s3:
-            return Status.MISSING_S3_RELATION.value
-
-        if not s3.verify():
+        if s3 and not s3.verify():
             return Status.INVALID_CREDENTIALS.value
 
         return Status.ACTIVE.value

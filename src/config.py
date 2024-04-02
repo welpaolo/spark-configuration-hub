@@ -22,12 +22,6 @@ class SparkConfigurationHubConfig(WithLogging):
     ):
         self.s3_connection_info = s3_connection_info
 
-    _base_conf: dict[str, str] = {
-        "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
-        "spark.hadoop.fs.s3a.path.style.access": "true",
-        "spark.eventLog.enabled": "true",
-    }
-
     @property
     def _s3_conf(self) -> dict[str, str]:
         return (
@@ -39,6 +33,9 @@ class SparkConfigurationHubConfig(WithLogging):
                 "spark.eventLog.dir": self.s3_connection_info.log_dir,
                 "spark.history.fs.logDirectory": self.s3_connection_info.log_dir,
                 "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+                "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
+                "spark.hadoop.fs.s3a.path.style.access": "true",
+                "spark.eventLog.enabled": "true",
             }
             if self.s3_connection_info
             else {}
@@ -46,7 +43,7 @@ class SparkConfigurationHubConfig(WithLogging):
 
     def to_dict(self) -> dict[str, str]:
         """Return the dict representation of the configuration file."""
-        return self._base_conf | self._s3_conf
+        return self._s3_conf
 
     @property
     def contents(self) -> str:

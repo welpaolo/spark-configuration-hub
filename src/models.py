@@ -64,6 +64,5 @@ class Status(Enum):
 
     INSTALL = MaintenanceStatus("Installing...")
     MISSING_PERMISSIONS = BlockedStatus("Charm needs to be deploy with --trust")
-    MISSING_S3_RELATION = BlockedStatus("Missing S3 relation")
     INVALID_CREDENTIALS = BlockedStatus("Invalid S3 credentials")
     ACTIVE = ActiveStatus("")
