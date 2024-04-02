@@ -1,0 +1,16 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: spark-configuration-hub
+display-name: Spark Configuration Hub
+summary: Kubernetes based charm for the Spark Configuration Hub
+description: This is the Spark configuration hub charm.
+
+peers:
+  spark-configuration-hub-peers:
+    interface: spark-configuration-hub-peers
+
+
+requires:
+  s3-credentials:
+    interface: s3
