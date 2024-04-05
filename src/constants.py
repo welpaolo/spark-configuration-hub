@@ -6,7 +6,6 @@
 
 """Literals and constants."""
 
+CONTAINER = "spark-configuration-hub"
 
-PEER = "spark-configuration-hub-peers"
-S3_INTEGRATOR_REL = "s3-credentials"
-CONF_FILE_PATH = "/tmp/spark.conf"
+PEBBLE_USER = ("_daemon_", "_daemon_")
