@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Manager for handling Spark History Server TLS configuration."""
+"""Manager for handling Spark Configuration Hub TLS configuration."""
 
 import subprocess
 from functools import cached_property

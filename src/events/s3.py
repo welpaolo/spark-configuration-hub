@@ -13,22 +13,22 @@ from ops import CharmBase
 
 from common.utils import WithLogging
 from core.context import Context
-from core.workload import SparkHistoryWorkloadBase
+from core.workload import ConfigurationHubWorkloadBase
 from events.base import BaseEventHandler, compute_status
-from managers.history_server import HistoryServerManager
+from managers.configuration_hub import ConfigurationHubManager
 
 
 class S3Events(BaseEventHandler, WithLogging):
     """Class implementing S3 Integration event hooks."""
 
-    def __init__(self, charm: CharmBase, context: Context, workload: SparkHistoryWorkloadBase):
+    def __init__(self, charm: CharmBase, context: Context, workload: ConfigurationHubWorkloadBase):
         super().__init__(charm, "s3")
 
         self.charm = charm
         self.context = context
         self.workload = workload
 
-        self.history_server = HistoryServerManager(self.workload)
+        self.configuration_hub = ConfigurationHubManager(self.workload)
 
         self.s3_requirer = S3Requirer(self.charm, self.context.s3_endpoint.relation_name)
         self.framework.observe(
@@ -40,12 +40,12 @@ class S3Events(BaseEventHandler, WithLogging):
     def _on_s3_credential_changed(self, _: CredentialsChangedEvent):
         """Handle the `CredentialsChangedEvent` event from S3 integrator."""
         self.logger.info("S3 Credentials changed")
-        self.history_server.update(self.context.s3, self.context.ingress)
+        self.configuration_hub.update(self.context.s3, self.context.ingress)
 
     def _on_s3_credential_gone(self, _: CredentialsGoneEvent):
         """Handle the `CredentialsGoneEvent` event for S3 integrator."""
         self.logger.info("S3 Credentials gone")
-        self.history_server.update(None, self.context.ingress)
+        self.configuration_hub.update(None, self.context.ingress)
 
         self.charm.unit.status = self.get_app_status(
             None, self.context.ingress, self.context.auth_proxy_config

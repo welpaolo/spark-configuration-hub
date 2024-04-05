@@ -10,14 +10,14 @@ from typing import Callable
 from ops import CharmBase, EventBase, Object, StatusBase
 
 from core.context import Context, S3ConnectionInfo, Status
-from core.workload import SparkHistoryWorkloadBase
+from core.workload import ConfigurationHubWorkloadBase
 from managers.s3 import S3Manager
 
 
 class BaseEventHandler(Object):
-    """Base class for all Event Handler classes in the Spark History Server."""
+    """Base class for all Event Handler classes in the Spark Configuration Hub."""
 
-    workload: SparkHistoryWorkloadBase
+    workload: ConfigurationHubWorkloadBase
     charm: CharmBase
     context: Context
 

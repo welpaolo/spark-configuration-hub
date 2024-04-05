@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Limited
 # See LICENSE file for licensing details.
 
-"""Implementation and blue-print for Spark History Server workloads."""
+"""Implementation and blue-print for Spark Configuration Hub workloads."""
 
 import secrets
 import string

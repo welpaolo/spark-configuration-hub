@@ -74,7 +74,7 @@ class ConfigurationHubConfig(WithLogging):
 
 
 class ConfigurationHubManager(WithLogging):
-    """Class exposing general functionalities of the SparkHistoryServer workload."""
+    """Class exposing general functionalities of the ConfigurationHub workload."""
 
     def __init__(self, workload: ConfigurationHubWorkloadBase):
         self.workload = workload
@@ -82,7 +82,7 @@ class ConfigurationHubManager(WithLogging):
         self.tls = TLSManager(workload)
 
     def update(self, s3: S3ConnectionInfo | None) -> None:
-        """Update the Spark History server service if needed."""
+        """Update the Configuration Hub service if needed."""
         self.workload.stop()
 
         config = ConfigurationHubConfig(s3)

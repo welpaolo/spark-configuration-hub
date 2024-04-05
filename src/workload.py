@@ -11,10 +11,10 @@ from ops.model import Container
 from common.k8s import K8sWorkload
 from common.utils import WithLogging
 from core.domain import User
-from core.workload import HistoryServerPaths, SparkHistoryWorkloadBase
+from core.workload import ConfigurationHubPaths, ConfigurationHubWorkloadBase
 
 
-class SparkHistoryServer(SparkHistoryWorkloadBase, K8sWorkload, WithLogging):
+class ConfigurationHub(ConfigurationHubWorkloadBase, K8sWorkload, WithLogging):
     """Class representing Workload implementation for the Configuration Hub charm on K8s."""
 
     CONTAINER = "spark-configuration-hub"
@@ -29,7 +29,7 @@ class SparkHistoryServer(SparkHistoryWorkloadBase, K8sWorkload, WithLogging):
         self.container = container
         self.user = user
 
-        self.paths = HistoryServerPaths(conf_path=self.CONFS_PATH, keytool="keytool")
+        self.paths = ConfigurationHubPaths(conf_path=self.CONFS_PATH, keytool="keytool")
 
         self._envs = None
 
@@ -47,13 +47,10 @@ class SparkHistoryServer(SparkHistoryWorkloadBase, K8sWorkload, WithLogging):
     def _spark_configuration_hub_layer(self):
         """Return a dictionary representing a Pebble layer."""
         layer = {
-            "summary": "spark history server layer",
-            "description": "pebble config layer for spark history server",
+            "summary": "spark configuration hub layer",
+            "description": "pebble config layer for spark configuration hub",
             "services": {
                 self.CONFIGURATION_HUB_SERVICE: {
-                    # "override": "merge",
-                    # "summary": "spark history server",
-                    # "startup": "enabled",
                     "environment": self.envs,
                 }
             },
@@ -67,7 +64,7 @@ class SparkHistoryServer(SparkHistoryWorkloadBase, K8sWorkload, WithLogging):
 
         layer["services"][self.CONFIGURATION_HUB_SERVICE] = (
             layer["services"][self.CONFIGURATION_HUB_SERVICE]
-            | self._spark_history_server_layer["services"][self.CONFIGURATION_HUB_SERVICE]
+            | self._spark_configuration_hub_layer["services"][self.CONFIGURATION_HUB_SERVICE]
         )
 
         self.container.add_layer(self.CONTAINER_LAYER, layer, combine=True)
@@ -77,7 +74,6 @@ class SparkHistoryServer(SparkHistoryWorkloadBase, K8sWorkload, WithLogging):
             raise FileNotFoundError(self.paths.spark_properties)
 
         # Push an updated layer with the new config
-        # self.container.replan()
         self.container.restart(self.CONFIGURATION_HUB_SERVICE)
 
     def stop(self):

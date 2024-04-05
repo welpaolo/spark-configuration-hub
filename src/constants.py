@@ -6,6 +6,6 @@
 
 """Literals and constants."""
 
-CONTAINER = "spark-configuration-hub"
+CONTAINER = "configuration-hub"
 
 PEBBLE_USER = ("_daemon_", "_daemon_")

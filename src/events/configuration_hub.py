@@ -10,33 +10,33 @@ from common.utils import WithLogging
 from core.context import Context
 from core.workload import ConfigurationHubWorkloadBase
 from events.base import BaseEventHandler, compute_status
-from managers.history_server import HistoryServerManager
+from managers.configuration_hub import ConfigurationHubManager
 
 
-class HistoryServerEvents(BaseEventHandler, WithLogging):
-    """Class implementing Spark History Server event hooks."""
+class ConfigurationHubEvents(BaseEventHandler, WithLogging):
+    """Class implementing Spark Configuration Hub event hooks."""
 
     def __init__(self, charm: CharmBase, context: Context, workload: ConfigurationHubWorkloadBase):
-        super().__init__(charm, "history-server")
+        super().__init__(charm, "configuration-hub")
 
         self.charm = charm
         self.context = context
         self.workload = workload
 
-        self.history_server = HistoryServerManager(self.workload)
+        self.configuration_hub = ConfigurationHubManager(self.workload)
 
         self.framework.observe(
-            self.charm.on.spark_history_server_pebble_ready,
-            self._on_spark_history_server_pebble_ready,
+            self.charm.on.configuration_hub_pebble_ready,
+            self._on_configuration_hub_pebble_ready,
         )
         self.framework.observe(self.charm.on.update_status, self._update_event)
         self.framework.observe(self.charm.on.install, self._update_event)
 
     @compute_status
-    def _on_spark_history_server_pebble_ready(self, event):
+    def _on_configuration_hub_pebble_ready(self, event):
         """Handle on Pebble ready event."""
         self.logger.info("Pebble ready")
-        self.history_server.update(self.context.s3, self.context.ingress)
+        self.configuration_hub.update(self.context.s3, self.context.ingress)
 
     @compute_status
     def _update_event(self, _):

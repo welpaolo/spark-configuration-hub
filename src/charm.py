@@ -11,13 +11,11 @@ from common.utils import WithLogging
 from constants import CONTAINER, PEBBLE_USER
 from core.context import Context
 from core.domain import User
-from events.history_server import HistoryServerEvents
-from events.ingress import IngressEvents
 from events.s3 import S3Events
-from workload import SparkHistoryServer
+from workload import ConfigurationHub
 
 
-class SparkHistoryServerCharm(CharmBase, WithLogging):
+class SparkConfigurationHub(CharmBase, WithLogging):
     """Charm the service."""
 
     def __init__(self, *args):
@@ -25,14 +23,13 @@ class SparkHistoryServerCharm(CharmBase, WithLogging):
 
         context = Context(self)
 
-        workload = SparkHistoryServer(
+        workload = ConfigurationHub(
             self.unit.get_container(CONTAINER), User(name=PEBBLE_USER[0], group=PEBBLE_USER[1])
         )
 
-        self.ingress = IngressEvents(self, context, workload)
         self.s3 = S3Events(self, context, workload)
-        self.history_server = HistoryServerEvents(self, context, workload)
+        self.configuration_hub = (self, context, workload)
 
 
 if __name__ == "__main__":  # pragma: nocover
-    main(SparkHistoryServerCharm)
+    main(SparkConfigurationHub)
