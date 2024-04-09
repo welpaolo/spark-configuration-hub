@@ -17,15 +17,16 @@ from core.workload import ConfigurationHubPaths, ConfigurationHubWorkloadBase
 class ConfigurationHub(ConfigurationHubWorkloadBase, K8sWorkload, WithLogging):
     """Class representing Workload implementation for the Configuration Hub charm on K8s."""
 
-    CONTAINER = "spark-configuration-hub"
-    CONTAINER_LAYER = "spark-configuration-hub"
+    CONTAINER = "configuration-hub"
+    CONTAINER_LAYER = "configuration-hub"
 
     CONFIGURATION_HUB_SERVICE = "configuration-hub"
 
-    CONFS_PATH = "/etc/spark/conf"
-    ENV_FILE = "/etc/spark/environment"
+    CONFS_PATH = "/etc/hub/conf"
+    ENV_FILE = "/etc/hub/environment"
 
     def __init__(self, container: Container, user: User):
+        self.logger.info("INIT ConfigurationHub")
         self.container = container
         self.user = user
 

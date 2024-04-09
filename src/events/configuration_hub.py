@@ -18,7 +18,6 @@ class ConfigurationHubEvents(BaseEventHandler, WithLogging):
 
     def __init__(self, charm: CharmBase, context: Context, workload: ConfigurationHubWorkloadBase):
         super().__init__(charm, "configuration-hub")
-
         self.charm = charm
         self.context = context
         self.workload = workload
@@ -33,10 +32,9 @@ class ConfigurationHubEvents(BaseEventHandler, WithLogging):
         self.framework.observe(self.charm.on.install, self._update_event)
 
     @compute_status
-    def _on_configuration_hub_pebble_ready(self, event):
+    def _on_configuration_hub_pebble_ready(self, _):
         """Handle on Pebble ready event."""
-        self.logger.info("Pebble ready")
-        self.configuration_hub.update(self.context.s3, self.context.ingress)
+        self.configuration_hub.update(self.context.s3)
 
     @compute_status
     def _update_event(self, _):

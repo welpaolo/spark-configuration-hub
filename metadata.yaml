@@ -16,10 +16,6 @@ resources:
     description: OCI image for the Spark Configuration Hub Charm
     upstream-source: ghcr.io/welpaolo/charmed-spark-configuration-hub:3.4-22.04_edge
 
-peers:
-  spark-configuration-hub-peers:
-    interface: spark-configuration-hub-peers
-
 requires:
   s3-credentials:
     interface: s3

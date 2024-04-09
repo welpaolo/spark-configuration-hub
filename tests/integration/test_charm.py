@@ -165,7 +165,11 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
 
     charm = await ops_test.build_charm(".")
 
-    resources = {}
+    image_version = METADATA["resources"]["configuration-hub-image"]["upstream-source"]
+
+    logger.info(f"Image version: {image_version}")
+
+    resources = {"configuration-hub-image": image_version}
 
     logger.info("Deploying Spark Configuration hub charm")
 
@@ -183,7 +187,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME, charm_versions.s3.application_name], timeout=1000
+        apps=[APP_NAME, charm_versions.s3.application_name], timeout=300
     )
 
     s3_integrator_unit = ops_test.model.applications[charm_versions.s3.application_name].units[0]

@@ -9,7 +9,6 @@ import re
 from common.utils import WithLogging
 from core.context import S3ConnectionInfo
 from core.workload import ConfigurationHubWorkloadBase
-from managers.tls import TLSManager
 
 
 class ConfigurationHubConfig(WithLogging):
@@ -31,17 +30,6 @@ class ConfigurationHubConfig(WithLogging):
         return "false"
 
     @property
-    def _ingress_proxy_conf(self) -> dict[str, str]:
-        return (
-            {
-                "spark.ui.proxyBase": self._ingress_pattern.sub("/", ingress.url),
-                "spark.ui.proxyRedirectUri": self._ingress_pattern.match(ingress.url).group(),
-            }
-            if (ingress := self.ingress)
-            else {}
-        )
-
-    @property
     def _s3_conf(self) -> dict[str, str]:
         if s3 := self.s3:
             return {
@@ -57,7 +45,7 @@ class ConfigurationHubConfig(WithLogging):
 
     def to_dict(self) -> dict[str, str]:
         """Return the dict representation of the configuration file."""
-        return self._base_conf | self._s3_conf | self._ingress_proxy_conf
+        return self._base_conf | self._s3_conf
 
     @property
     def contents(self) -> str:
@@ -79,33 +67,15 @@ class ConfigurationHubManager(WithLogging):
     def __init__(self, workload: ConfigurationHubWorkloadBase):
         self.workload = workload
 
-        self.tls = TLSManager(workload)
-
     def update(self, s3: S3ConnectionInfo | None) -> None:
         """Update the Configuration Hub service if needed."""
+        self.logger.debug("Update")
         self.workload.stop()
 
         config = ConfigurationHubConfig(s3)
-
         self.workload.write(config.contents, str(self.workload.paths.spark_properties))
         self.workload.set_environment(
             {"SPARK_PROPERTIES_FILE": str(self.workload.paths.spark_properties)}
-        )
-
-        # self.tls.reset()
-
-        if not s3:
-            return
-
-        # if tls_ca_chain := s3.tls_ca_chain:
-        #     self.tls.import_ca("\n".join(tls_ca_chain))
-        #     self.workload.set_environment(
-        #         {
-        #             "SPARK_HISTORY_OPTS": f"-Djavax.net.ssl.trustStore={self.workload.paths.truststore} "
-        #             f"-Djavax.net.ssl.trustStorePassword={self.tls.truststore_password}"
-        #         }
-        #     )
-        # else:
-        #     self.workload.set_environment({"SPARK_HISTORY_OPTS": ""})
-
+        )    
+        self.logger.info("Start service")
         self.workload.start()

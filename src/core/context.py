@@ -58,6 +58,5 @@ class Status(Enum):
 
     WAITING_PEBBLE = MaintenanceStatus("Waiting for Pebble")
     INVALID_CREDENTIALS = BlockedStatus("Invalid S3 credentials")
-    MISSING_INGRESS_RELATION = BlockedStatus("Missing INGRESS relation")
     NOT_RUNNING = BlockedStatus("Configuration Hub is not running. Please check logs.")
     ACTIVE = ActiveStatus("")

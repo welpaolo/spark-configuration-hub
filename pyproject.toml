@@ -70,6 +70,7 @@ juju = ">=3.0"
 coverage = {extras = ["toml"], version = ">7.0"}
 pytest-operator = ">=0.34.0"
 tenacity = "^8.2.2"
+pydantic ="^1.10.7"
 pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v6.1.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
 # To be enabled if we are using groups on integration tests
 # pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v6.1.1", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
