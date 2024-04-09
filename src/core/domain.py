@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Limited
 # See LICENSE file for licensing details.
 
-"""Domain object of the Spark History Server charm."""
+"""Domain object of the Spark Configuration Hub charm."""
 
 import json
 from dataclasses import dataclass

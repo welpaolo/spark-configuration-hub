@@ -21,14 +21,14 @@ class SparkConfigurationHub(CharmBase, WithLogging):
 
     def __init__(self, *args):
         super().__init__(*args)
-        
+
         context = Context(self)
         workload = ConfigurationHub(
             self.unit.get_container(CONTAINER), User(name=PEBBLE_USER[0], group=PEBBLE_USER[1])
         )
-        
+
         self.s3 = S3Events(self, context, workload)
-        
+
         self.configuration_hub = ConfigurationHubEvents(self, context, workload)
 
 

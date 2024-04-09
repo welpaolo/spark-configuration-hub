@@ -76,6 +76,6 @@ class ConfigurationHubManager(WithLogging):
         self.workload.write(config.contents, str(self.workload.paths.spark_properties))
         self.workload.set_environment(
             {"SPARK_PROPERTIES_FILE": str(self.workload.paths.spark_properties)}
-        )    
+        )
         self.logger.info("Start service")
         self.workload.start()

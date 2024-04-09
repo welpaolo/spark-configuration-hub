@@ -28,7 +28,7 @@ class Context(WithLogging):
     # --------------
     # --- CONFIG ---
     # --------------
-    # We don't have config yet in the Spark History Server charm.
+    # We don't have config yet in the Spark Configuration hub charm.
     # --------------
 
     # -----------------
@@ -59,4 +59,5 @@ class Status(Enum):
     WAITING_PEBBLE = MaintenanceStatus("Waiting for Pebble")
     INVALID_CREDENTIALS = BlockedStatus("Invalid S3 credentials")
     NOT_RUNNING = BlockedStatus("Configuration Hub is not running. Please check logs.")
+    NOT_TRUSTED = BlockedStatus("Configuration Hub is not trusted! Please check logs.")
     ACTIVE = ActiveStatus("")

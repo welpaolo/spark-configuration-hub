@@ -26,7 +26,6 @@ class ConfigurationHub(ConfigurationHubWorkloadBase, K8sWorkload, WithLogging):
     ENV_FILE = "/etc/hub/environment"
 
     def __init__(self, container: Container, user: User):
-        self.logger.info("INIT ConfigurationHub")
         self.container = container
         self.user = user
 
