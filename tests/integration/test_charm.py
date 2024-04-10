@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import subprocess
+import urllib.request
 import uuid
 from pathlib import Path
 from time import sleep
@@ -262,3 +263,52 @@ async def test_add_new_service_account(ops_test: OpsTest, namespace, service_acc
     )
     assert len(secret_data) > 0
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
+
+
+@pytest.mark.abort_on_fail
+async def test_relation_to_pushgateway(
+    ops_test: OpsTest, charm_versions, namespace, service_account
+):
+
+    logger.info("Relating spark configuration hub charm with s3-integrator charm")
+
+    await ops_test.model.deploy(**charm_versions.pushgateway.deploy_dict())
+
+    await ops_test.model.wait_for_idle(
+        apps=[charm_versions.pushgateway.application_name], timeout=1000, status="active"
+    )
+
+    await ops_test.model.add_relation(charm_versions.pushgateway.application_name, APP_NAME)
+
+    # TODO check for health
+
+    status = await ops_test.model.get_status()
+    address = status["applications"][charm_versions.pushgateway.application_nam]["units"][
+        f"{charm_versions.pushgateway.application_nam}/0"
+    ]["address"]
+
+    metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
+
+    assert len(metrics["data"]) == 0
+
+    setup_spark_output = subprocess.check_output(
+        "./tests/integration/setup/setup_spark.sh",
+        shell=True,
+        stderr=None,
+    ).decode("utf-8")
+
+    logger.info(f"Setup spark output:\n{setup_spark_output}")
+
+    logger.info("Executing Spark job")
+
+    run_spark_output = subprocess.check_output(
+        "./tests/integration/setup/run_spark_job.sh", shell=True, stderr=None
+    ).decode("utf-8")
+
+    logger.info(f"Run spark output:\n{run_spark_output}")
+
+    logger.info("Verifying metrics is present in the pushgateway has")
+
+    metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
+
+    assert len(metrics["data"]) > 0
