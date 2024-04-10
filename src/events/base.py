@@ -11,6 +11,7 @@ from ops import CharmBase, EventBase, Object, StatusBase
 
 from core.context import Context, S3ConnectionInfo, Status
 from core.workload import ConfigurationHubWorkloadBase
+from managers.k8s import KubernetesManager
 from managers.s3 import S3Manager
 
 
@@ -25,6 +26,10 @@ class BaseEventHandler(Object):
         """Return the status of the charm."""
         if not self.workload.ready():
             return Status.WAITING_PEBBLE.value
+
+        k8s_manager = KubernetesManager(self.charm.model.app.name)
+        if not k8s_manager.trusted():
+            return Status.NOT_TRUSTED.value
 
         s3 = s3
 
