@@ -8,6 +8,7 @@ import re
 
 from common.utils import WithLogging
 from core.context import S3ConnectionInfo
+from core.domain import PushGatewayInfo
 from core.workload import ConfigurationHubWorkloadBase
 
 
@@ -18,8 +19,9 @@ class ConfigurationHubConfig(WithLogging):
 
     _base_conf: dict[str, str] = {}
 
-    def __init__(self, s3: S3ConnectionInfo | None):
+    def __init__(self, s3: S3ConnectionInfo | None, pushgateway: PushGatewayInfo | None):
         self.s3 = s3
+        self.pushgateway = pushgateway
 
     @staticmethod
     def _ssl_enabled(endpoint: str | None) -> str:
@@ -43,9 +45,22 @@ class ConfigurationHubConfig(WithLogging):
             }
         return {}
 
+    @property
+    def _pushgateway_conf(self) -> dict[str, str]:
+        if pg := self.pushgateway:
+            return {
+                "spark.metrics.conf.*.sink.prometheus.pushgateway-address": pg.endpoint,  # type: ignore
+                "spark.metrics.conf.*.sink.prometheus.class": "org.apache.spark.banzaicloud.metrics.sink.PrometheusSink",
+                "spark.metrics.conf.*.sink.prometheus.enable-dropwizard-collector": "true",
+                "spark.metrics.conf.*.sink.prometheus.period": "5",
+                "spark.metrics.conf.*.sink.prometheus.metrics-name-capture-regex": "([a-z0-9]*_[a-z0-9]*_[a-z0-9]*_)(.+)",
+                "spark.metrics.conf.*.sink.prometheus.metrics-name-replacement": "\\$2",
+            }
+        return {}
+
     def to_dict(self) -> dict[str, str]:
         """Return the dict representation of the configuration file."""
-        return self._base_conf | self._s3_conf
+        return self._base_conf | self._s3_conf | self._pushgateway_conf
 
     @property
     def contents(self) -> str:
@@ -67,12 +82,12 @@ class ConfigurationHubManager(WithLogging):
     def __init__(self, workload: ConfigurationHubWorkloadBase):
         self.workload = workload
 
-    def update(self, s3: S3ConnectionInfo | None) -> None:
+    def update(self, s3: S3ConnectionInfo | None, pushgateway: PushGatewayInfo | None) -> None:
         """Update the Configuration Hub service if needed."""
         self.logger.debug("Update")
         self.workload.stop()
 
-        config = ConfigurationHubConfig(s3)
+        config = ConfigurationHubConfig(s3, pushgateway)
         self.workload.write(config.contents, str(self.workload.paths.spark_properties))
         self.workload.set_environment(
             {"SPARK_PROPERTIES_FILE": str(self.workload.paths.spark_properties)}

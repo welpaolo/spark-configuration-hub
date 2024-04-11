@@ -10,9 +10,10 @@ from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from ops import ActiveStatus, BlockedStatus, CharmBase, MaintenanceStatus, Relation
 
 from common.utils import WithLogging
-from core.domain import S3ConnectionInfo
+from core.domain import PushGatewayInfo, S3ConnectionInfo
 
 S3 = "s3-credentials"
+PUSHGATEWAY = "cos"
 
 
 class Context(WithLogging):
@@ -45,12 +46,27 @@ class Context(WithLogging):
         """The S3 relation."""
         return self.charm.model.get_relation(S3)
 
+    @property
+    def _pushgateway_relation_id(self) -> int | None:
+        """The Pushgateway relation."""
+        return relation.id if (relation := self.charm.model.get_relation(PUSHGATEWAY)) else None
+
+    @property
+    def _pushgateway_relation(self) -> Relation | None:
+        """The Pushgateway relation."""
+        return self.charm.model.get_relation(PUSHGATEWAY)
+
     # --- DOMAIN OBJECTS ---
 
     @property
     def s3(self) -> S3ConnectionInfo | None:
         """The server state of the current running Unit."""
         return S3ConnectionInfo(rel, rel.app) if (rel := self._s3_relation) else None
+
+    @property
+    def pushgateway(self) -> PushGatewayInfo | None:
+        """The server state of the current running Unit."""
+        return PushGatewayInfo(rel, rel.app) if (rel := self._pushgateway_relation) else None
 
 
 class Status(Enum):

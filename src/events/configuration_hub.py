@@ -34,7 +34,7 @@ class ConfigurationHubEvents(BaseEventHandler, WithLogging):
     @compute_status
     def _on_configuration_hub_pebble_ready(self, _):
         """Handle on Pebble ready event."""
-        self.configuration_hub.update(self.context.s3)
+        self.configuration_hub.update(self.context.s3, self.context.pushgateway)
 
     @compute_status
     def _update_event(self, _):
