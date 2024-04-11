@@ -29,8 +29,12 @@ class PushgatewayEvents(BaseEventHandler, WithLogging):
 
         self.pushgateway = PrometheusPushgatewayRequirer(self.charm, PUSHGATEWAY)
 
-        self.framework.observe(self.charm.on[PUSHGATEWAY].relation_changed, self._on_pushgateway_changed)
-        self.framework.observe(self.charm.on[PUSHGATEWAY].relation_broken, self._on_pushgateway_gone)
+        self.framework.observe(
+            self.charm.on[PUSHGATEWAY].relation_changed, self._on_pushgateway_changed
+        )
+        self.framework.observe(
+            self.charm.on[PUSHGATEWAY].relation_broken, self._on_pushgateway_gone
+        )
 
     @compute_status
     def _on_pushgateway_changed(self, _: RelationChangedEvent):

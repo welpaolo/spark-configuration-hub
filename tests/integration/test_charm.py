@@ -285,21 +285,21 @@ async def test_relation_to_pushgateway(
         status="active",
         timeout=1000,
     )
-    
+
     sleep(5)
-    
+
     secret_data = get_secret_data(
         namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
     )
     logger.info(f"namespace: {namespace} -> secret_data: {secret_data}")
-    
+
     conf_prop = False
     for key in secret_data.keys():
         if "spark.metrics.conf" in key:
             conf_prop = True
             break
     assert conf_prop
-    
+
     status = await ops_test.model.get_status()
     address = status["applications"][charm_versions.pushgateway.application_name]["units"][
         f"{charm_versions.pushgateway.application_name}/0"
@@ -320,7 +320,9 @@ async def test_relation_to_pushgateway(
     logger.info("Executing Spark job")
 
     run_spark_output = subprocess.check_output(
-        f"./tests/integration/setup/run_spark_job.sh {service_account_name} {namespace}", shell=True, stderr=None
+        f"./tests/integration/setup/run_spark_job.sh {service_account_name} {namespace}",
+        shell=True,
+        stderr=None,
     ).decode("utf-8")
 
     logger.info(f"Run spark output:\n{run_spark_output}")
@@ -330,5 +332,5 @@ async def test_relation_to_pushgateway(
     metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
 
     logger.info(f"Metrics: {metrics}")
-    
+
     assert len(metrics["data"]) > 0
