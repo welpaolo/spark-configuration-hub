@@ -54,7 +54,7 @@ class ConfigurationHubConfig(WithLogging):
                 "spark.metrics.conf.*.sink.prometheus.enable-dropwizard-collector": "true",
                 "spark.metrics.conf.*.sink.prometheus.period": "5",
                 "spark.metrics.conf.*.sink.prometheus.metrics-name-capture-regex": "([a-z0-9]*_[a-z0-9]*_[a-z0-9]*_)(.+)",
-                "spark.metrics.conf.*.sink.prometheus.metrics-name-replacement": "\\$2",
+                "spark.metrics.conf.*.sink.prometheus.metrics-name-replacement": "$2",
             }
         return {}
 
@@ -88,6 +88,8 @@ class ConfigurationHubManager(WithLogging):
         self.workload.stop()
 
         config = ConfigurationHubConfig(s3, pushgateway)
+        self.logger.info(f"Config: {config.contents}")
+        self.logger.info(f"Path: {str(self.workload.paths.spark_properties)}")
         self.workload.write(config.contents, str(self.workload.paths.spark_properties))
         self.workload.set_environment(
             {"SPARK_PROPERTIES_FILE": str(self.workload.paths.spark_properties)}

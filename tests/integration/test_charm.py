@@ -271,7 +271,7 @@ async def test_relation_to_pushgateway(
 ):
 
     logger.info("Relating spark configuration hub charm with s3-integrator charm")
-
+    service_account_name = service_account[0]
     await ops_test.model.deploy(**charm_versions.pushgateway.deploy_dict())
 
     await ops_test.model.wait_for_idle(
@@ -280,11 +280,29 @@ async def test_relation_to_pushgateway(
 
     await ops_test.model.add_relation(charm_versions.pushgateway.application_name, APP_NAME)
 
-    # TODO check for health
-
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME, charm_versions.pushgateway.application_name],
+        status="active",
+        timeout=1000,
+    )
+    
+    sleep(5)
+    
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
+    )
+    logger.info(f"namespace: {namespace} -> secret_data: {secret_data}")
+    
+    conf_prop = False
+    for key in secret_data.keys():
+        if "spark.metrics.conf" in key:
+            conf_prop = True
+            break
+    assert conf_prop
+    
     status = await ops_test.model.get_status()
-    address = status["applications"][charm_versions.pushgateway.application_nam]["units"][
-        f"{charm_versions.pushgateway.application_nam}/0"
+    address = status["applications"][charm_versions.pushgateway.application_name]["units"][
+        f"{charm_versions.pushgateway.application_name}/0"
     ]["address"]
 
     metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
@@ -292,7 +310,7 @@ async def test_relation_to_pushgateway(
     assert len(metrics["data"]) == 0
 
     setup_spark_output = subprocess.check_output(
-        "./tests/integration/setup/setup_spark.sh",
+        f"./tests/integration/setup/setup_spark.sh {service_account_name} {namespace}",
         shell=True,
         stderr=None,
     ).decode("utf-8")
@@ -302,7 +320,7 @@ async def test_relation_to_pushgateway(
     logger.info("Executing Spark job")
 
     run_spark_output = subprocess.check_output(
-        "./tests/integration/setup/run_spark_job.sh", shell=True, stderr=None
+        f"./tests/integration/setup/run_spark_job.sh {service_account_name} {namespace}", shell=True, stderr=None
     ).decode("utf-8")
 
     logger.info(f"Run spark output:\n{run_spark_output}")
@@ -311,4 +329,6 @@ async def test_relation_to_pushgateway(
 
     metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
 
+    logger.info(f"Metrics: {metrics}")
+    
     assert len(metrics["data"]) > 0

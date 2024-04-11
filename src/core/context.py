@@ -9,6 +9,7 @@ from enum import Enum
 from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from ops import ActiveStatus, BlockedStatus, CharmBase, MaintenanceStatus, Relation
 
+from charms.prometheus_pushgateway_k8s.v0.pushgateway import PrometheusPushgatewayRequirer
 from common.utils import WithLogging
 from core.domain import PushGatewayInfo, S3ConnectionInfo
 
@@ -25,6 +26,7 @@ class Context(WithLogging):
         self.model = charm.model
 
         self.s3_endpoint = RequirerData(self.charm.model, S3)
+        # self.pushgateway_endpoint = PrometheusPushgatewayRequirer(self.charm, PUSHGATEWAY)
 
     # --------------
     # --- CONFIG ---

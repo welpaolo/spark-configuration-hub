@@ -14,7 +14,7 @@ from core.domain import User
 
 
 class ConfigurationHubPaths:
-    """Object to store common paths for Kafka."""
+    """Object to store common paths for Configuration Hub."""
 
     def __init__(self, conf_path: Path | str, keytool: str):
         self.conf_path = conf_path if isinstance(conf_path, Path) else Path(conf_path)
