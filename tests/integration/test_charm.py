@@ -272,6 +272,8 @@ async def test_relation_to_pushgateway(
 
     logger.info("Relating spark configuration hub charm with s3-integrator charm")
     service_account_name = service_account[0]
+    # namespace= ops_test.model_name
+    logger.info(f"Test with namespace: {namespace}")
     await ops_test.model.deploy(**charm_versions.pushgateway.deploy_dict())
 
     await ops_test.model.wait_for_idle(

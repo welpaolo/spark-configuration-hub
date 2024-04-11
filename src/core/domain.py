@@ -101,5 +101,6 @@ class PushGatewayInfo(StateBase):
         if raw_data:
             data = json.loads(raw_data)
             if "url" in data:
-                return data["url"]
+                url = data["url"]
+                return url.replace("https://", "").replace("http://", "")
         return None
