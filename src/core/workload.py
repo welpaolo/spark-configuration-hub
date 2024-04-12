@@ -25,16 +25,6 @@ class ConfigurationHubPaths:
         """Return the path of the spark-properties file."""
         return self.conf_path / "spark-properties.conf"
 
-    @property
-    def cert(self):
-        """Return the path of the certificate file."""
-        return self.conf_path / "ca.pem"
-
-    @property
-    def truststore(self):
-        """Return the path of the truststore."""
-        return self.conf_path / "truststore.jks"
-
 
 class ConfigurationHubWorkloadBase(AbstractWorkload):
     """Base interface for common workload operations."""

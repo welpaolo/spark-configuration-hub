@@ -7,6 +7,7 @@
 from ops.charm import CharmBase
 
 from common.utils import WithLogging
+from constants import CONFIGURATION_HUB_LABEL
 from core.context import Context
 from core.workload import ConfigurationHubWorkloadBase
 from events.base import BaseEventHandler, compute_status
@@ -30,6 +31,13 @@ class ConfigurationHubEvents(BaseEventHandler, WithLogging):
         )
         self.framework.observe(self.charm.on.update_status, self._update_event)
         self.framework.observe(self.charm.on.install, self._update_event)
+        self.framework.observe(self.charm.on.stop, self._remove_resources)
+
+    def _remove_resources(self, _):
+        """Handle the stop event."""
+        self.configuration_hub.workload.exec(
+            f"kubectl delete secret -l {CONFIGURATION_HUB_LABEL} --all-namespaces"
+        )
 
     @compute_status
     def _on_configuration_hub_pebble_ready(self, _):

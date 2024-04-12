@@ -7,5 +7,6 @@
 """Literals and constants."""
 
 CONTAINER = "configuration-hub"
+CONFIGURATION_HUB_LABEL = "app.kubernetes.io/managed-by=configuration-hub"
 
 PEBBLE_USER = ("_daemon_", "_daemon_")
