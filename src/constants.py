@@ -6,7 +6,10 @@
 
 """Literals and constants."""
 
+CONTAINER = "configuration-hub"
+CONFIGURATION_HUB_LABEL = "app.kubernetes.io/managed-by=configuration-hub"
 
-PEER = "spark-configuration-hub-peers"
-S3_INTEGRATOR_REL = "s3-credentials"
-CONF_FILE_PATH = "/tmp/spark.conf"
+PEBBLE_USER = ("_daemon_", "_daemon_")
+
+# integrations
+S3 = "s3-credentials"

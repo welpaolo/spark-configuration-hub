@@ -6,10 +6,15 @@ display-name: Spark Configuration Hub
 summary: Kubernetes based charm for the Spark Configuration Hub
 description: This is the Spark configuration hub charm.
 
-peers:
-  spark-configuration-hub-peers:
-    interface: spark-configuration-hub-peers
+containers:
+  configuration-hub:
+    resource: configuration-hub-image
 
+resources:
+  configuration-hub-image:
+    type: oci-image
+    description: OCI image for the Spark Configuration Hub Charm
+    upstream-source: ghcr.io/welpaolo/charmed-spark-configuration-hub:3.4-22.04_edge
 
 requires:
   s3-credentials:
