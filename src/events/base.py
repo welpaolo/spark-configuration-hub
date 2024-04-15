@@ -10,6 +10,7 @@ from typing import Callable
 from ops import CharmBase, EventBase, Object, StatusBase
 
 from core.context import Context, S3ConnectionInfo, Status
+from core.domain import PushGatewayInfo
 from core.workload import ConfigurationHubWorkloadBase
 from managers.k8s import KubernetesManager
 from managers.s3 import S3Manager
@@ -22,7 +23,11 @@ class BaseEventHandler(Object):
     charm: CharmBase
     context: Context
 
-    def get_app_status(self, s3: S3ConnectionInfo | None) -> StatusBase:
+    def get_app_status(
+        self,
+        s3: S3ConnectionInfo | None,
+        pushgateway: PushGatewayInfo | None,
+    ) -> StatusBase:
         """Return the status of the charm."""
         if not self.workload.ready():
             return Status.WAITING_PEBBLE.value
@@ -55,10 +60,10 @@ def compute_status(
         res = hook(event_handler, event)
         if event_handler.charm.unit.is_leader():
             event_handler.charm.app.status = event_handler.get_app_status(
-                event_handler.context.s3,
+                event_handler.context.s3, event_handler.context.pushgateway
             )
         event_handler.charm.unit.status = event_handler.get_app_status(
-            event_handler.context.s3,
+            event_handler.context.s3, event_handler.context.pushgateway
         )
         return res
 

@@ -13,3 +13,4 @@ PEBBLE_USER = ("_daemon_", "_daemon_")
 
 # integrations
 S3 = "s3-credentials"
+PUSHGATEWAY = "cos"
