@@ -10,9 +10,8 @@ from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from ops import ActiveStatus, BlockedStatus, CharmBase, MaintenanceStatus, Relation
 
 from common.utils import WithLogging
+from constants import S3
 from core.domain import S3ConnectionInfo
-
-S3 = "s3-credentials"
 
 
 class Context(WithLogging):

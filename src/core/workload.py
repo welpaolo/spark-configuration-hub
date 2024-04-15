@@ -4,8 +4,6 @@
 
 """Implementation and blue-print for Spark Configuration Hub workloads."""
 
-import secrets
-import string
 from abc import abstractmethod
 from pathlib import Path
 
@@ -51,12 +49,3 @@ class ConfigurationHubWorkloadBase(AbstractWorkload):
     def ready(self) -> bool:
         """Checks that the container/snap is ready."""
         ...
-
-    @staticmethod
-    def generate_password() -> str:
-        """Creates randomized string for use as app passwords.
-
-        Returns:
-            String of 32 randomized letter+digit characters
-        """
-        return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(32)])
