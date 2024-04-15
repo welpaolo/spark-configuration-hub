@@ -322,34 +322,6 @@ async def test_add_removal_s3_relation(
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_application(ops_test: OpsTest, namespace, service_account, charm_versions):
-    service_account_name = service_account[0]
-
-    # wait for the update of secres
-    sleep(5)
-    # check secret
-
-    secret_data = get_secret_data(
-        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
-    )
-    assert len(secret_data) > 0
-    assert "spark.hadoop.fs.s3a.access.key" in secret_data
-
-    logger.info(f"Remove {APP_NAME}")
-    await ops_test.model.remove_application(APP_NAME, block_until_done=True, timeout=600)
-
-    await ops_test.model.wait_for_idle(
-        apps=[charm_versions.s3.application_name], status="active", timeout=300
-    )
-
-    secret_data = get_secret_data(
-        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
-    )
-    logger.info(f"secret data: {secret_data}")
-    assert len(secret_data) == 0
-
-
-@pytest.mark.abort_on_fail
 async def test_relation_to_pushgateway(
     ops_test: OpsTest, charm_versions, namespace, service_account
 ):
@@ -420,3 +392,31 @@ async def test_relation_to_pushgateway(
     logger.info(f"Metrics: {metrics}")
 
     assert len(metrics["data"]) > 0
+
+
+@pytest.mark.abort_on_fail
+async def test_remove_application(ops_test: OpsTest, namespace, service_account, charm_versions):
+    service_account_name = service_account[0]
+
+    # wait for the update of secres
+    sleep(5)
+    # check secret
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
+    )
+    assert len(secret_data) > 0
+    assert "spark.hadoop.fs.s3a.access.key" in secret_data
+
+    logger.info(f"Remove {APP_NAME}")
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True, timeout=600)
+
+    await ops_test.model.wait_for_idle(
+        apps=[charm_versions.s3.application_name], status="active", timeout=300
+    )
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
+    )
+    logger.info(f"secret data: {secret_data}")
+    assert len(secret_data) == 0
