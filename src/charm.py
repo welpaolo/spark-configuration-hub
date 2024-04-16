@@ -31,7 +31,7 @@ class SparkConfigurationHub(CharmBase, WithLogging):
         self.s3 = S3Events(self, context, workload)
         self.pushgateway = PushgatewayEvents(self, context, workload)
         self.configuration_hub = ConfigurationHubEvents(self, context, workload)
-        
+
 
 if __name__ == "__main__":  # pragma: nocover
     main(SparkConfigurationHub)
