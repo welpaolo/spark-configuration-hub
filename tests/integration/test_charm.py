@@ -27,17 +27,6 @@ BUCKET_NAME = "test-bucket"
 SECRET_NAME_PREFIX = "configuration-hub-conf-"
 
 
-@pytest.fixture
-def namespace():
-    """A temporary K8S namespace gets cleaned up automatically."""
-    namespace_name = str(uuid.uuid4())
-    create_command = ["kubectl", "create", "namespace", namespace_name]
-    subprocess.run(create_command, check=True)
-    yield namespace_name
-    destroy_command = ["kubectl", "delete", "namespace", namespace_name]
-    subprocess.run(destroy_command, check=True)
-
-
 def run_service_account_registry(*args):
     """Run service_account_registry CLI command with given set of args.
 
