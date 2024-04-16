@@ -84,6 +84,9 @@ jobs:
       - name: Get prefsrc
         run: |
           echo "IPADDR=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')" >> $GITHUB_ENV
+      name: Charmcraft (tmp)
+        run: |
+          sudo snap install charmcraft --classic
       - name: Setup operator environment
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
