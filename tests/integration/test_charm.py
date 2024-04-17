@@ -118,7 +118,6 @@ def setup_s3_bucket_for_sch_server(endpoint_url: str, aws_access_key: str, aws_s
     logger.debug(s3.list_buckets())
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
     """Build the charm-under-test and deploy it together with related charms.
@@ -203,7 +202,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm_versions):
     )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_to_s3(ops_test: OpsTest, charm_versions, namespace, service_account):
 
@@ -240,7 +238,6 @@ async def test_relation_to_s3(ops_test: OpsTest, charm_versions, namespace, serv
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_add_new_service_account(ops_test: OpsTest, namespace, service_account):
     service_account_name = service_account[0]
@@ -256,7 +253,6 @@ async def test_add_new_service_account(ops_test: OpsTest, namespace, service_acc
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_add_removal_s3_relation(
     ops_test: OpsTest, namespace, service_account, charm_versions
@@ -313,7 +309,6 @@ async def test_add_removal_s3_relation(
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_remove_application(ops_test: OpsTest, namespace, service_account, charm_versions):
     service_account_name = service_account[0]

@@ -40,7 +40,6 @@ def check_service_account_existance(namespace: str, service_account_name) -> boo
         return False
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_test_app(ops_test: OpsTest):
     """Build the charm-under-test and deploy it together with related charms.
@@ -83,7 +82,6 @@ async def test_build_and_deploy_test_app(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=[APP_NAME, DUMMY_APP_NAME], status="active")
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, namespace):
 
