@@ -61,8 +61,6 @@ jobs:
   build:
     name: Build charms
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v11.0.1
-    with:
-      cache: true
 
   integration-test:
     strategy:
