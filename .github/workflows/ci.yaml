@@ -64,7 +64,7 @@ jobs:
       matrix:
         path:
           - .
-          - tests/integration/app_charm
+          - tests/integration/app-charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.2
     with:
       path-to-charm-directory: ${{ matrix.path }}
