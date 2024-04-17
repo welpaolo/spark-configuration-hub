@@ -60,7 +60,31 @@ jobs:
 
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v11.0.1
+    strategy:
+      matrix:
+        path:
+          - .
+          - tests/integration/app_charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.2
+    with:
+      path-to-charm-directory: ${{ matrix.path }}
+      cache: true
+  
+  # integration-test:
+  #   name: Integration test charm
+  #   needs:
+  #     - lint
+  #     - unit-test
+  #     - build
+  #   uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.1.2
+  #   with:
+  #     artifact-prefix: packed-charm-cache-true
+  #     cloud: microk8s
+  #     microk8s-snap-channel: 1.28-strict/stable
+  #     juju-agent-version: 3.1.6
+  #   permissions:
+  #     contents: write # Needed for Allure Report beta
+
 
   integration-test:
     strategy:
@@ -98,7 +122,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build.outputs.artifact-name }}
-          merge-multiple: true
       - name: Select tests
         id: select-tests
         run: |
@@ -123,3 +146,4 @@ jobs:
         with:
           app: data-platform-libs
           model: "${{ matrix.tox-environments }}"
+  
