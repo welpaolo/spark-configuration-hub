@@ -66,12 +66,12 @@ def namespace():
     subprocess.run(destroy_command, check=True)
 
 
-@pytest.fixture(scope="module")
-async def test_charm(ops_test: OpsTest):
-    """Build the application charm."""
-    charm_path = "tests/integration/app-charm"
-    charm = await ops_test.build_charm(charm_path)
-    return charm
+# @pytest.fixture(scope="module")
+# async def test_charm(ops_test: OpsTest):
+#     """Build the application charm."""
+#     charm_path = "tests/integration/app-charm"
+#     charm = await ops_test.build_charm(charm_path)
+#     return charm
 
 
 @pytest.fixture(scope="module", autouse=True)
