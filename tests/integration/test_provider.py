@@ -51,7 +51,7 @@ async def test_build_and_deploy_test_app(ops_test: OpsTest):
 
     charm = await ops_test.build_charm(".")
 
-    test_charm = await ops_test.build_charm("tests/integration/app-charm")
+    test_charm = await ops_test.build_charm("tests/integration/app-charm", verbosity="trace")
 
     image_version = METADATA["resources"]["configuration-hub-image"]["upstream-source"]
 
