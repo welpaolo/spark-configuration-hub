@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Limited
 # See LICENSE file for licensing details.
 
-"""S3 Integration related event handlers."""
+"""Prometheus PushGateway related event handlers."""
 
 
 from charms.prometheus_pushgateway_k8s.v0.pushgateway import PrometheusPushgatewayRequirer
@@ -19,7 +19,7 @@ class PushgatewayEvents(BaseEventHandler, WithLogging):
     """Class implementing PushGateway event hooks."""
 
     def __init__(self, charm: CharmBase, context: Context, workload: ConfigurationHubWorkloadBase):
-        super().__init__(charm, "pushgateway")
+        super().__init__(charm, PUSHGATEWAY)
 
         self.charm = charm
         self.context = context

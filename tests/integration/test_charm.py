@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 BUCKET_NAME = "test-bucket"
-SECRET_NAME_PREFIX = "configuration-hub-conf-"
+SECRET_NAME_PREFIX = "integrator-hub-conf-"
 
 
 @pytest.fixture
@@ -392,6 +392,25 @@ async def test_relation_to_pushgateway(
     logger.info(f"Metrics: {metrics}")
 
     assert len(metrics["data"]) > 0
+
+    await ops_test.model.applications[APP_NAME].remove_relation(
+        f"{APP_NAME}:cos", f"{charm_versions.pushgateway.application_name}:push-endpoint"
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME, charm_versions.pushgateway.application_name],
+        status="active",
+        timeout=300,
+        idle_period=30,
+    )
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
+    )
+
+    for key in secret_data.keys():
+        if "spark.metrics.conf" in key:
+            assert False
 
 
 @pytest.mark.abort_on_fail
