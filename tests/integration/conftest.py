@@ -40,6 +40,7 @@ class CharmVersion(BaseModel):
 
 class IntegrationTestsCharms(BaseModel):
     s3: CharmVersion
+    pushgateway: CharmVersion
 
 
 @pytest.fixture
@@ -47,5 +48,13 @@ def charm_versions() -> IntegrationTestsCharms:
     return IntegrationTestsCharms(
         s3=CharmVersion(
             **{"name": "s3-integrator", "channel": "edge", "series": "jammy", "alias": "s3"}
+        ),
+        pushgateway=CharmVersion(
+            **{
+                "name": "prometheus-pushgateway-k8s",
+                "channel": "stable",
+                "series": "jammy",
+                "alias": "pushgateway",
+            }
         ),
     )

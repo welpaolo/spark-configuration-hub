@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import subprocess
+import urllib.request
 import uuid
 from pathlib import Path
 from time import sleep
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 BUCKET_NAME = "test-bucket"
-SECRET_NAME_PREFIX = "configuration-hub-conf-"
+SECRET_NAME_PREFIX = "integrator-hub-conf-"
 
 
 @pytest.fixture
@@ -318,6 +319,98 @@ async def test_add_removal_s3_relation(
     logger.info(f"namespace: {namespace} -> secret_data: {secret_data}")
     assert len(secret_data) > 0
     assert "spark.hadoop.fs.s3a.access.key" in secret_data
+
+
+@pytest.mark.abort_on_fail
+async def test_relation_to_pushgateway(
+    ops_test: OpsTest, charm_versions, namespace, service_account
+):
+
+    logger.info("Relating spark configuration hub charm with s3-integrator charm")
+    service_account_name = service_account[0]
+    # namespace= ops_test.model_name
+    logger.info(f"Test with namespace: {namespace}")
+    await ops_test.model.deploy(**charm_versions.pushgateway.deploy_dict())
+
+    await ops_test.model.wait_for_idle(
+        apps=[charm_versions.pushgateway.application_name], timeout=1000, status="active"
+    )
+
+    await ops_test.model.add_relation(charm_versions.pushgateway.application_name, APP_NAME)
+
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME, charm_versions.pushgateway.application_name],
+        status="active",
+        timeout=1000,
+    )
+
+    sleep(5)
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
+    )
+    logger.info(f"namespace: {namespace} -> secret_data: {secret_data}")
+
+    conf_prop = False
+    for key in secret_data.keys():
+        if "spark.metrics.conf" in key:
+            conf_prop = True
+            break
+    assert conf_prop
+
+    status = await ops_test.model.get_status()
+    address = status["applications"][charm_versions.pushgateway.application_name]["units"][
+        f"{charm_versions.pushgateway.application_name}/0"
+    ]["address"]
+
+    metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
+
+    assert len(metrics["data"]) == 0
+
+    setup_spark_output = subprocess.check_output(
+        f"./tests/integration/setup/setup_spark.sh {service_account_name} {namespace}",
+        shell=True,
+        stderr=None,
+    ).decode("utf-8")
+
+    logger.info(f"Setup spark output:\n{setup_spark_output}")
+
+    logger.info("Executing Spark job")
+
+    run_spark_output = subprocess.check_output(
+        f"./tests/integration/setup/run_spark_job.sh {service_account_name} {namespace}",
+        shell=True,
+        stderr=None,
+    ).decode("utf-8")
+
+    logger.info(f"Run spark output:\n{run_spark_output}")
+
+    logger.info("Verifying metrics is present in the pushgateway has")
+
+    metrics = json.loads(urllib.request.urlopen(f"http://{address}:9091/api/v1/metrics").read())
+
+    logger.info(f"Metrics: {metrics}")
+
+    assert len(metrics["data"]) > 0
+
+    await ops_test.model.applications[APP_NAME].remove_relation(
+        f"{APP_NAME}:cos", f"{charm_versions.pushgateway.application_name}:push-endpoint"
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME, charm_versions.pushgateway.application_name],
+        status="active",
+        timeout=300,
+        idle_period=30,
+    )
+
+    secret_data = get_secret_data(
+        namespace=namespace, secret_name=f"{SECRET_NAME_PREFIX}{service_account_name}"
+    )
+
+    for key in secret_data.keys():
+        if "spark.metrics.conf" in key:
+            assert False
 
 
 @pytest.mark.abort_on_fail

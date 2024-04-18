@@ -86,3 +86,21 @@ class S3ConnectionInfo(StateBase):
     def log_dir(self) -> str:
         """Return the full path to the object."""
         return f"s3a://{self.bucket}/{self.path}"
+
+
+class PushGatewayInfo(StateBase):
+    """Class representing thr endpoints to connect to the prometheus PushGateway."""
+
+    def __init__(self, relation: Relation, component: Application):
+        super().__init__(relation, component)
+
+    @property
+    def endpoint(self) -> str | None:
+        """Return endpoint of the Prometheus PushGateway."""
+        raw_data = self.relation_data.get("push-endpoint", None)
+        if raw_data:
+            data = json.loads(raw_data)
+            if "url" in data:
+                url = data["url"]
+                return url.replace("https://", "").replace("http://", "")
+        return None
