@@ -7,7 +7,7 @@
 from ops import CharmBase
 
 from common.utils import WithLogging
-from constants import CONFIGURATION_HUB_REL
+from constants import INTEGRATION_HUB_REL
 from core.context import Context
 from core.workload import ConfigurationHubWorkloadBase
 from events.base import BaseEventHandler
@@ -28,7 +28,7 @@ class IntegrationHubProviderEvents(BaseEventHandler, WithLogging):
         self.context = context
         self.workload = workload
 
-        self.sa = IntegrationHubProvider(self.charm, CONFIGURATION_HUB_REL)
+        self.sa = IntegrationHubProvider(self.charm, INTEGRATION_HUB_REL)
         self.framework.observe(self.sa.on.account_requested, self._on_service_account_requested)
         self.framework.observe(self.sa.on.account_released, self._on_service_account_released)
 
