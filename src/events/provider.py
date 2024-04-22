@@ -18,7 +18,7 @@ from relations.spark_sa import (
 )
 
 
-class ServiceAccountsEvents(BaseEventHandler, WithLogging):
+class IntegrationHubProviderEvents(BaseEventHandler, WithLogging):
     """Class implementing Spark Service Account Integration event hooks."""
 
     def __init__(self, charm: CharmBase, context: Context, workload: ConfigurationHubWorkloadBase):
@@ -33,7 +33,7 @@ class ServiceAccountsEvents(BaseEventHandler, WithLogging):
         self.framework.observe(self.sa.on.account_released, self._on_service_account_released)
 
     def _on_service_account_requested(self, event: ServiceAccountRequestedEvent):
-        """Handle the `ServiceAccountRequested` event for the Spark Integrator hub."""
+        """Handle the `ServiceAccountRequested` event for the Spark Integration hub."""
         self.logger.info("Service account requested.")
 
         if not self.charm.unit.is_leader():
@@ -64,7 +64,7 @@ class ServiceAccountsEvents(BaseEventHandler, WithLogging):
         self.sa.set_namespace(relation_id, namespace)
 
     def _on_service_account_released(self, event: ServiceAccountReleasedEvent):
-        """Handle the `ServiceAccountReleased` event for the Spark Integrator hub."""
+        """Handle the `ServiceAccountReleased` event for the Spark Integration hub."""
         self.logger.info("Service account released.")
 
         if not self.charm.unit.is_leader():
