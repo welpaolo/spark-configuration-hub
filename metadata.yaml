@@ -19,10 +19,11 @@ resources:
 requires:
   s3-credentials:
     interface: s3
+  cos:
+    interface: pushgateway
 
 provides:
   spark-service-account:
     interface: spark_service_account
-  cos:
-    interface: pushgateway
+  
 
