@@ -83,7 +83,7 @@ async def test_build_and_deploy_test_app(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, namespace):
+async def test_integration_hub_relation(ops_test: OpsTest, namespace):
 
     logger.info(f"Add namespace: {namespace}")
     configuration_parameters = {"namespace": namespace}

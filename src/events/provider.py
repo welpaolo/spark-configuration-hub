@@ -11,7 +11,6 @@ from constants import CONFIGURATION_HUB_REL
 from core.context import Context
 from core.workload import ConfigurationHubWorkloadBase
 from events.base import BaseEventHandler
-from managers.configuration_hub import ConfigurationHubManager
 from relations.spark_sa import (
     IntegrationHubProvider,
     ServiceAccountReleasedEvent,
@@ -28,8 +27,6 @@ class ServiceAccountsEvents(BaseEventHandler, WithLogging):
         self.charm = charm
         self.context = context
         self.workload = workload
-
-        self.configuration_hub = ConfigurationHubManager(self.workload)
 
         self.sa = IntegrationHubProvider(self.charm, CONFIGURATION_HUB_REL)
         self.framework.observe(self.sa.on.account_requested, self._on_service_account_requested)
