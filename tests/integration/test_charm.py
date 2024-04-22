@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 BUCKET_NAME = "test-bucket"
-SECRET_NAME_PREFIX = "configuration-hub-conf-"
+SECRET_NAME_PREFIX = "integrator-hub-conf-"
 
 
 def run_service_account_registry(*args):
