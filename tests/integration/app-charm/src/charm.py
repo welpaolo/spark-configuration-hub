@@ -14,7 +14,7 @@ from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
 
-from relations.spark_sa import ServiceAccountGrantedEvent, ServiceAccountRequirer
+from relations.spark_sa import IntegrationHubRequirer, ServiceAccountGrantedEvent
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,10 @@ class ApplicationCharm(CharmBase):
 
         namespace = self.config["namespace"]
 
-        self.sa1 = ServiceAccountRequirer(
+        self.sa1 = IntegrationHubRequirer(
             self, relation_name=REL_NAME_A, service_account="sa1", namespace=namespace
         )
-        self.sa2 = ServiceAccountRequirer(
+        self.sa2 = IntegrationHubRequirer(
             self, relation_name=REL_NAME_B, service_account="sa2", namespace=namespace
         )
 

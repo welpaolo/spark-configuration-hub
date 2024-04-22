@@ -7,13 +7,13 @@
 from ops import CharmBase
 
 from common.utils import WithLogging
-from constants import SERVICE_ACCOUNT
+from constants import CONFIGURATION_HUB_REL
 from core.context import Context
 from core.workload import ConfigurationHubWorkloadBase
 from events.base import BaseEventHandler
 from managers.configuration_hub import ConfigurationHubManager
 from relations.spark_sa import (
-    ServiceAccountProvider,
+    IntegrationHubProvider,
     ServiceAccountReleasedEvent,
     ServiceAccountRequestedEvent,
 )
@@ -31,7 +31,7 @@ class ServiceAccountsEvents(BaseEventHandler, WithLogging):
 
         self.configuration_hub = ConfigurationHubManager(self.workload)
 
-        self.sa = ServiceAccountProvider(self.charm, SERVICE_ACCOUNT)
+        self.sa = IntegrationHubProvider(self.charm, CONFIGURATION_HUB_REL)
         self.framework.observe(self.sa.on.account_requested, self._on_service_account_requested)
         self.framework.observe(self.sa.on.account_released, self._on_service_account_released)
 
@@ -63,10 +63,8 @@ class ServiceAccountsEvents(BaseEventHandler, WithLogging):
                 f"Impossible to create service account: {service_account} in namespace: {namespace}"
             )
 
-        sa_configuration = {"service-account": service_account, "namespace": namespace}
-
-        # update connection parameters in the relation data bug
-        self.sa.update_connection_info(relation_id, sa_configuration)
+        self.sa.set_service_account(relation_id, service_account)
+        self.sa.set_namespace(relation_id, namespace)
 
     def _on_service_account_released(self, event: ServiceAccountReleasedEvent):
         """Handle the `ServiceAccountReleased` event for the Spark Integrator hub."""

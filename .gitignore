@@ -157,3 +157,6 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+tests/integration/app-charm/lib/charms/data_platform_libs/v0/data_interfaces.py
+tests/integration/app-charm/src/relations/spark_sa.py

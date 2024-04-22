@@ -16,22 +16,25 @@ r"""A library for creating service accounts that are configured to run Spark job
 import json
 import logging
 from collections import namedtuple
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
-import ops.charm
-import ops.framework
-import ops.model
-from ops import RelationDepartedEvent
+from charms.data_platform_libs.v0.data_interfaces import (
+    SECRET_GROUPS,
+    EventHandlers,
+    ProviderData,
+    RequirerData,
+    RequirerEventHandlers,
+)
+from ops import Model, RelationCreatedEvent, RelationDepartedEvent, SecretChangedEvent
 from ops.charm import (
     CharmBase,
     CharmEvents,
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationEvent,
-    RelationJoinedEvent,
 )
-from ops.framework import EventSource, Object, ObjectEvents
-from ops.model import Application, Relation, RelationDataContent, Unit
+from ops.framework import EventSource, ObjectEvents
+from ops.model import Application, Unit
 
 # The unique Charmhub library identifier, never change it
 LIBID = ""
@@ -120,159 +123,11 @@ class ServiceAccountReleasedEvent(ServiceAccountEvent):
     """Event emitted when a set of service account/namespace is released."""
 
 
-class IntegratorHubServiceAccountEvents(CharmEvents):
+class IntegrationHubProvidesEvents(CharmEvents):
     """Event descriptor for events raised by ServiceAccountProvider."""
 
     account_requested = EventSource(ServiceAccountRequestedEvent)
     account_released = EventSource(ServiceAccountReleasedEvent)
-
-
-class ServiceAccountProvider(Object):
-    """A provider handler for communicating ServiceAccount details to consumers."""
-
-    on = (
-        IntegratorHubServiceAccountEvents()
-    )  # pyright: ignore [reportAssignmentType, reportGeneralTypeIssues]
-
-    def __init__(
-        self,
-        charm: CharmBase,
-        relation_name: str,
-    ):
-        super().__init__(charm, relation_name)
-        self.charm = charm
-        self.local_app = self.charm.model.app
-        self.local_unit = self.charm.unit
-        self.relation_name = relation_name
-
-        # monitor relation changed event for changes in the provided fields
-        self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
-        self.framework.observe(
-            charm.on[relation_name].relation_departed, self._on_relation_departed
-        )
-
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        """React to the relation changed event by consuming data."""
-        if not self.charm.unit.is_leader():
-            return
-        diff = self._diff(event)
-        # emit on account requested if service account name is provided by the requirer application
-        if "service-account" in diff.added:
-            getattr(self.on, "account_requested").emit(
-                event.relation, app=event.app, unit=event.unit
-            )
-
-    def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
-        """React to the relation changed event by consuming data."""
-        if not self.charm.unit.is_leader():
-            return
-
-        getattr(self.on, "account_released").emit(event.relation, app=event.app, unit=event.unit)
-
-    def _load_relation_data(self, raw_relation_data: dict) -> dict:
-        """Loads relation data from the relation data bag.
-
-        Args:
-            raw_relation_data: Relation data from the databag
-        Returns:
-            dict: Relation data in dict format.
-        """
-        connection_data = {}
-        for key in raw_relation_data:
-            try:
-                connection_data[key] = json.loads(raw_relation_data[key])
-            except (json.decoder.JSONDecodeError, TypeError):
-                connection_data[key] = raw_relation_data[key]
-        return connection_data
-
-    def _diff(self, event: RelationChangedEvent) -> Diff:
-        """Retrieves the diff of the data in the relation changed databag.
-
-        Args:
-            event: relation changed event.
-
-        Returns:
-            a Diff instance containing the added, deleted and changed
-                keys from the event relation databag.
-        """
-        return diff(event, self.local_app)
-
-    def fetch_relation_data(self) -> dict:
-        """Retrieves data from relation.
-
-        This function can be used to retrieve data from a relation
-        in the charm code when outside an event callback.
-
-        Returns:
-            a dict of the values stored in the relation data bag
-                for all relation instances (indexed by the relation id).
-        """
-        data = {}
-        for relation in self.relations:
-            data[relation.id] = (
-                {key: value for key, value in relation.data[relation.app].items() if key != "data"}
-                if relation.app
-                else {}
-            )
-        return data
-
-    def update_connection_info(self, relation_id: int, connection_data: dict) -> None:
-        """Updates the fields in the databag as set of key-value pairs in the relation.
-
-        This function writes in the application data bag, therefore,
-        only the leader unit can call it.
-
-        Args:
-            relation_id: the identifier for a particular relation.
-            connection_data: dict containing the key-value pairs
-                that should be updated.
-        """
-        # check and write changes only if you are the leader
-        if not self.local_unit.is_leader():
-            return
-
-        relation = self.charm.model.get_relation(self.relation_name, relation_id)
-
-        if not relation:
-            return
-
-        # update the databag, if connection data did not change with respect to before
-        # the relation changed event is not triggered
-        updated_connection_data = {}
-        for configuration_option, configuration_value in connection_data.items():
-            updated_connection_data[configuration_option] = configuration_value
-
-        relation.data[self.local_app].update(updated_connection_data)
-        logger.debug(f"Updated service account info: {updated_connection_data}")
-
-    @property
-    def relations(self) -> List[Relation]:
-        """The list of Relation instances associated with this relation_name."""
-        return list(self.charm.model.relations[self.relation_name])
-
-    def set_service_account(self, relation_id: int, service_account: str) -> None:
-        """Sets service account name in application databag.
-
-        This function writes in the application data bag, therefore,
-        only the leader unit can call it.
-
-        Args:
-            relation_id: the identifier for a particular relation.
-            service_account: the service account name.
-        """
-        self.update_connection_info(relation_id, {"service-account": service_account})
-
-    def set_namespace(self, relation_id: int, namespace: str) -> None:
-        """Sets access-key value in application databag.
-
-        This function writes in the application data bag, therefore,
-        only the leader unit can call it.
-
-        Args:
-            relation_id: the identifier for a particular relation.
-            namespace: the name of the service account.
-        """
-        self.update_connection_info(relation_id, {"namespace": namespace})
 
 
 class ServiceAccountGrantedEvent(ServiceAccountEvent):
@@ -283,164 +138,196 @@ class ServiceAccountGoneEvent(RelationEvent):
     """Event emitted when service account are removed from this relation."""
 
 
-class ServiceAccountRequiresEvents(ObjectEvents):
-    """Event descriptor for events raised by the ServiceAccountProvider."""
+class IntegrationHubRequiresEvents(ObjectEvents):
+    """Event descriptor for events raised by the Requires."""
 
     account_granted = EventSource(ServiceAccountGrantedEvent)
     account_gone = EventSource(ServiceAccountGoneEvent)
 
 
-REQUIRED_OPTIONS = ["service-account", "namespace"]
+# Integration Hub Provides and Requires
 
 
-class ServiceAccountRequirer(Object):
-    """Requires-side of the Service Account relation."""
+class IntegrationHubProvidesData(ProviderData):
+    """Provider-side of the Spark Integration Hub relation."""
 
-    on = (
-        ServiceAccountRequiresEvents()
-    )  # pyright: ignore[reportAssignmentType, reportGeneralTypeIssues]
+    def __init__(self, model: Model, relation_name: str) -> None:
+        super().__init__(model, relation_name)
 
-    def __init__(
-        self, charm: ops.charm.CharmBase, relation_name: str, service_account: str, namespace: str
-    ):
-        """Manager of the ServiceAccount client relations."""
-        super().__init__(charm, relation_name)
-
-        self.relation_name = relation_name
-        self.charm = charm
-        self.local_app = self.charm.model.app
-        self.local_unit = self.charm.unit
-        self.service_account = service_account
-        self.namespace = namespace
-
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_relation_changed
-        )
-
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_joined, self._on_relation_joined
-        )
-
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken,
-            self._on_relation_broken,
-        )
-
-    def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Event emitted when the application joins the service account relation."""
-        self.update_connection_info(
-            event.relation.id,
-            {"service-account": self.service_account, "namespace": self.namespace},
-        )
-
-    def fetch_relation_data(self) -> dict:
-        """Retrieves data from relation.
-
-        This function can be used to retrieve data from a relation
-        in the charm code when outside an event callback.
-
-        Returns:
-            a dict of the values stored in the relation data bag
-                for all relation instances (indexed by the relation id).
-        """
-        data = {}
-
-        for relation in self.relations:
-            data[relation.id] = self._load_relation_data(relation.data[self.charm.app])
-        return data
-
-    def update_connection_info(self, relation_id: int, connection_data: dict) -> None:
-        """Updates the databag as set of key-value pairs in the relation.
-
-        This function writes in the application data bag, therefore,
-        only the leader unit can call it.
+    def set_service_account(self, relation_id: int, service_account: str) -> None:
+        """Set the service account name in the application relation databag.
 
         Args:
             relation_id: the identifier for a particular relation.
-            connection_data: dict containing the key-value pairs
-                that should be updated.
+            service_account: the service account name.
         """
-        # check and write changes only if you are the leader
-        if not self.local_unit.is_leader():
-            return
+        self.update_relation_data(relation_id, {"service-account": service_account})
 
-        relation = self.charm.model.get_relation(self.relation_name, relation_id)
-
-        if not relation:
-            return
-
-        # update the databag, if connection data did not change with respect to before
-        # the relation changed event is not triggered
-        updated_data = {}
-        for configuration_option, configuration_value in connection_data.items():
-            updated_data[configuration_option] = configuration_value
-
-        relation.data[self.local_app].update(updated_data)
-        logger.debug(f"Updated service-account data: {updated_data}")
-
-    def _load_relation_data(self, raw_relation_data: RelationDataContent) -> Dict[str, str]:
-        """Loads relation data from the relation data bag.
+    def set_namespace(self, relation_id: int, namespace: str) -> None:
+        """Set the bootstrap server in the application relation databag.
 
         Args:
-            raw_relation_data: Relation data from the databag
-        Returns:
-            dict: Relation data in dict format.
+            relation_id: the identifier for a particular relation.
+            namespace: the namespace name.
         """
-        connection_data = {}
-        for key in raw_relation_data:
-            try:
-                connection_data[key] = json.loads(raw_relation_data[key])
-            except (json.decoder.JSONDecodeError, TypeError):
-                connection_data[key] = raw_relation_data[key]
-        return connection_data
+        self.update_relation_data(relation_id, {"namespace": namespace})
 
-    def _diff(self, event: RelationChangedEvent) -> Diff:
-        """Retrieves the diff of the data in the relation changed databag.
 
-        Args:
-            event: relation changed event.
+class IntegrationHubProvidesEventHandlers(EventHandlers):
+    """Provider-side of the Integration Hub relation."""
 
-        Returns:
-            a Diff instance containing the added, deleted and changed
-                keys from the event relation databag.
-        """
-        return diff(event, self.local_unit)
+    on = IntegrationHubProvidesEvents()  # pyright: ignore [reportAssignmentType]
 
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Notify the charm about the presence of service-account info."""
-        # check if the mandatory options are in the relation data
-        contains_required_options = True
-        # get current service account info
-        infos = self.get_service_account_info()
-        # records missing options
-        missing_options = []
-        for configuration_option in REQUIRED_OPTIONS:
-            if configuration_option not in infos:
-                contains_required_options = False
-                missing_options.append(configuration_option)
-        # emit account change event only if all mandatory fields are present
-        if contains_required_options:
+    def __init__(self, charm: CharmBase, relation_data: IntegrationHubProvidesData) -> None:
+        super().__init__(charm, relation_data)
+        # Just to keep lint quiet, can't resolve inheritance. The same happened in super().__init__() above
+        self.relation_data = relation_data
+        self.framework.observe(
+            charm.on[self.relation_data.relation_name].relation_departed,
+            self._on_relation_departed,
+        )
+
+    def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
+        """Event emitted when the relation has changed."""
+        # Leader only
+        if not self.relation_data.local_unit.is_leader():
+            return
+
+        diff = self._diff(event)
+        # emit on account requested if service account name is provided by the requirer application
+        if "service-account" in diff.added:
+            getattr(self.on, "account_requested").emit(
+                event.relation, app=event.app, unit=event.unit
+            )
+
+    def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
+        """React to the relation changed event by consuming data."""
+        # Leader only
+        if not self.relation_data.local_unit.is_leader():
+            return
+
+        getattr(self.on, "account_released").emit(event.relation, app=event.app, unit=event.unit)
+
+
+class IntegrationHubProvider(IntegrationHubProvidesData, IntegrationHubProvidesEventHandlers):
+    """Provider-side of the Integration Hub relation."""
+
+    def __init__(self, charm: CharmBase, relation_name: str) -> None:
+        IntegrationHubProvidesData.__init__(self, charm.model, relation_name)
+        IntegrationHubProvidesEventHandlers.__init__(self, charm, self)
+
+
+class IntegrationHubRequiresData(RequirerData):
+    """Requirer-side of the Integration Hub relation."""
+
+    def __init__(
+        self,
+        model: Model,
+        relation_name: str,
+        service_account: str,
+        namespace: str,
+        additional_secret_fields: Optional[List[str]] = [],
+    ):
+        """Manager of Integration Hub relations."""
+        super().__init__(model, relation_name, additional_secret_fields=additional_secret_fields)
+        self.service_account = service_account
+        self.namespace = namespace
+
+    @property
+    def service_account(self):
+        """Service account used for Spark."""
+        return self._service_account
+
+    @service_account.setter
+    def service_account(self, value):
+        self._service_account = value
+
+    @property
+    def namespace(self):
+        """Namespace used for running Spark jobs."""
+        return self._namespace
+
+    @namespace.setter
+    def namespace(self, value):
+        self._namespace = value
+
+
+class IntegrationHubRequirerEventHandlers(RequirerEventHandlers):
+    """Requires-side of the Integration Hub relation."""
+
+    on = IntegrationHubRequiresEvents()  # pyright: ignore [reportAssignmentType]
+
+    def __init__(self, charm: CharmBase, relation_data: IntegrationHubRequiresData) -> None:
+        super().__init__(charm, relation_data)
+        # Just to keep lint quiet, can't resolve inheritance. The same happened in super().__init__() above
+        self.relation_data = relation_data
+        self.framework.observe(
+            charm.on[self.relation_data.relation_name].relation_broken,
+            self._on_relation_broken,
+        )
+
+    def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
+        """Event emitted when the Integration Hub relation is created."""
+        super()._on_relation_created_event(event)
+
+        if not self.relation_data.local_unit.is_leader():
+            return
+
+        # Sets service_account, namespace in the relation
+        relation_data = {
+            f: getattr(self, f.replace("-", "_"), "") for f in ["service-account", "namespace"]
+        }
+
+        self.relation_data.update_relation_data(event.relation.id, relation_data)
+
+    def _on_secret_changed_event(self, _: SecretChangedEvent):
+        """Event notifying about a new value of a secret."""
+        pass
+
+    def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
+        """Event emitted when the Integration Hub relation has changed."""
+        logger.info("On Integration Hub relation changed")
+        # Check which data has changed to emit customs events.
+        diff = self._diff(event)
+
+        # Check if the service-account is created in the desired namespace
+
+        # Register all new secrets with their labels
+        if any(newval for newval in diff.added if self.relation_data._is_secret_field(newval)):
+            self.relation_data._register_secrets_to_relation(event.relation, diff.added)
+
+        secret_field_user = self.relation_data._generate_secret_field_name(SECRET_GROUPS.USER)
+
+        if (
+            "service-account" in diff.added and "namespace" in diff.added
+        ) or secret_field_user in diff.added:
             getattr(self.on, "account_granted").emit(
                 event.relation, app=event.app, unit=event.unit
             )
-        else:
-            logger.warning(
-                f"Some mandatory fields: {missing_options} are not present, do not emit service account change event!"
-            )
-
-    def get_service_account_info(self) -> Dict[str, str]:
-        """Return the service account info as a dictionary."""
-        for relation in self.relations:
-            if relation and relation.app:
-                return self._load_relation_data(relation.data[relation.app])
-
-        return {}
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Notify the charm about a broken service account relation."""
+        logger.info("On Integration Hub relation gone")
         getattr(self.on, "account_gone").emit(event.relation, app=event.app, unit=event.unit)
 
-    @property
-    def relations(self) -> List[Relation]:
-        """The list of Relation instances associated with this relation_name."""
-        return list(self.charm.model.relations[self.relation_name])
+
+class IntegrationHubRequirer(IntegrationHubRequiresData, IntegrationHubRequirerEventHandlers):
+    """Provider-side of the Integration Hub relation."""
+
+    def __init__(
+        self,
+        charm: CharmBase,
+        relation_name: str,
+        service_account: str,
+        namespace: str,
+        additional_secret_fields: Optional[List[str]] = [],
+    ) -> None:
+        IntegrationHubRequiresData.__init__(
+            self,
+            charm.model,
+            relation_name,
+            service_account,
+            namespace,
+            additional_secret_fields,
+        )
+        IntegrationHubRequirerEventHandlers.__init__(self, charm, self)

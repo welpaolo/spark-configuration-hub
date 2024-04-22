@@ -75,8 +75,16 @@ def namespace():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def copy_data_interfaces_library_into_charm(ops_test: OpsTest):
+def copy_hub_library_into_charm(ops_test: OpsTest):
     """Copy the data_interfaces library to the different charm folder."""
     library_path = "src/relations/spark_sa.py"
+    install_path = "tests/integration/app-charm/" + library_path
+    shutil.copyfile(f"{library_path}", install_path)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def copy_data_interfaces_library_into_charm(ops_test: OpsTest):
+    """Copy the data_interfaces library to the different charm folder."""
+    library_path = "lib/charms/data_platform_libs/v0/data_interfaces.py"
     install_path = "tests/integration/app-charm/" + library_path
     shutil.copyfile(f"{library_path}", install_path)
