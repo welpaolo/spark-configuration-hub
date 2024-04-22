@@ -1,6 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: Tests Spark Configuration Hub 
+name: Tests Spark Configuration Hub
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -128,4 +128,3 @@ jobs:
         with:
           app: data-platform-libs
           model: "${{ matrix.tox-environments }}"
-  
