@@ -69,22 +69,6 @@ jobs:
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
-  
-  # integration-test:
-  #   name: Integration test charm
-  #   needs:
-  #     - lint
-  #     - unit-test
-  #     - build
-  #   uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.1.2
-  #   with:
-  #     artifact-prefix: packed-charm-cache-true
-  #     cloud: microk8s
-  #     microk8s-snap-channel: 1.28-strict/stable
-  #     juju-agent-version: 3.1.6
-  #   permissions:
-  #     contents: write # Needed for Allure Report beta
-
 
   integration-test:
     strategy:
@@ -106,9 +90,6 @@ jobs:
       - name: Get prefsrc
         run: |
           echo "IPADDR=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')" >> $GITHUB_ENV
-      # - name: Charmcraft (tmp)
-      #   run: |
-      #     sudo snap install charmcraft --classic
       - name: Setup operator environment
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
