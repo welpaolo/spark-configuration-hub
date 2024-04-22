@@ -13,6 +13,7 @@ from core.context import Context
 from core.domain import User
 from events.configuration_hub import ConfigurationHubEvents
 from events.provider import IntegrationHubProviderEvents
+from events.pushgateway import PushgatewayEvents
 from events.s3 import S3Events
 from workload import ConfigurationHub
 
@@ -30,6 +31,7 @@ class SparkConfigurationHub(CharmBase, WithLogging):
 
         self.s3 = S3Events(self, context, workload)
         self.sa = IntegrationHubProviderEvents(self, context, workload)
+        self.pushgateway = PushgatewayEvents(self, context, workload)
         self.configuration_hub = ConfigurationHubEvents(self, context, workload)
 
 

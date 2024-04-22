@@ -23,3 +23,6 @@ requires:
 provides:
   spark-service-account:
     interface: spark_service_account
+  cos:
+    interface: pushgateway
+
