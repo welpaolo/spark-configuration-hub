@@ -75,7 +75,6 @@ def namespace():
     subprocess.run(destroy_command, check=True)
 
 
-
 @pytest.fixture(scope="module", autouse=True)
 def copy_hub_library_into_charm(ops_test: OpsTest):
     """Copy the data_interfaces library to the different charm folder."""
