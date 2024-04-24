@@ -45,11 +45,8 @@ class IntegrationHubProviderEvents(BaseEventHandler, WithLogging):
         self.logger.debug(
             f"Desired service account name: {service_account} in namespace: {namespace}"
         )
-        assert service_account is not None
-        assert namespace is not None
 
         # Try to create service account
-
         try:
             self.workload.exec(
                 f"python3 -m spark8t.cli.service_account_registry create --username={service_account} --namespace={namespace}"
@@ -60,8 +57,8 @@ class IntegrationHubProviderEvents(BaseEventHandler, WithLogging):
                 f"Impossible to create service account: {service_account} in namespace: {namespace}"
             )
 
-        self.sa.set_service_account(relation_id, service_account)
-        self.sa.set_namespace(relation_id, namespace)
+        self.sa.set_service_account(relation_id, service_account)  # type: ignore
+        self.sa.set_namespace(relation_id, namespace)  # type: ignore
 
     def _on_service_account_released(self, event: ServiceAccountReleasedEvent):
         """Handle the `ServiceAccountReleased` event for the Spark Integration hub."""
@@ -75,8 +72,6 @@ class IntegrationHubProviderEvents(BaseEventHandler, WithLogging):
         self.logger.debug(
             f"The service account name: {service_account} in namespace: {namespace} should be deleted"
         )
-        assert service_account is not None
-        assert namespace is not None
 
         # Try to create service account
         try:

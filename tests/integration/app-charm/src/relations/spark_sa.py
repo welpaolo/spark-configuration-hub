@@ -123,7 +123,7 @@ class ServiceAccountReleasedEvent(ServiceAccountEvent):
     """Event emitted when a set of service account/namespace is released."""
 
 
-class IntegrationHubProvidesEvents(CharmEvents):
+class IntegrationHubProviderEvents(CharmEvents):
     """Event descriptor for events raised by ServiceAccountProvider."""
 
     account_requested = EventSource(ServiceAccountRequestedEvent)
@@ -138,17 +138,17 @@ class ServiceAccountGoneEvent(RelationEvent):
     """Event emitted when service account are removed from this relation."""
 
 
-class IntegrationHubRequiresEvents(ObjectEvents):
-    """Event descriptor for events raised by the Requires."""
+class IntegrationHubRequirerEvents(ObjectEvents):
+    """Event descriptor for events raised by the Requirer."""
 
     account_granted = EventSource(ServiceAccountGrantedEvent)
     account_gone = EventSource(ServiceAccountGoneEvent)
 
 
-# Integration Hub Provides and Requires
+# Integration Hub Provider and Requirer
 
 
-class IntegrationHubProvidesData(ProviderData):
+class IntegrationHubProviderData(ProviderData):
     """Provider-side of the Spark Integration Hub relation."""
 
     def __init__(self, model: Model, relation_name: str) -> None:
@@ -173,12 +173,12 @@ class IntegrationHubProvidesData(ProviderData):
         self.update_relation_data(relation_id, {"namespace": namespace})
 
 
-class IntegrationHubProvidesEventHandlers(EventHandlers):
+class IntegrationHubProviderEventHandlers(EventHandlers):
     """Provider-side of the Integration Hub relation."""
 
-    on = IntegrationHubProvidesEvents()  # pyright: ignore [reportAssignmentType]
+    on = IntegrationHubProviderEvents()  # pyright: ignore [reportAssignmentType]
 
-    def __init__(self, charm: CharmBase, relation_data: IntegrationHubProvidesData) -> None:
+    def __init__(self, charm: CharmBase, relation_data: IntegrationHubProviderData) -> None:
         super().__init__(charm, relation_data)
         # Just to keep lint quiet, can't resolve inheritance. The same happened in super().__init__() above
         self.relation_data = relation_data
@@ -195,7 +195,7 @@ class IntegrationHubProvidesEventHandlers(EventHandlers):
 
         diff = self._diff(event)
         # emit on account requested if service account name is provided by the requirer application
-        if "service-account" in diff.added:
+        if "service-account" in diff.added and "namespace" in diff.added:
             getattr(self.on, "account_requested").emit(
                 event.relation, app=event.app, unit=event.unit
             )
@@ -209,15 +209,15 @@ class IntegrationHubProvidesEventHandlers(EventHandlers):
         getattr(self.on, "account_released").emit(event.relation, app=event.app, unit=event.unit)
 
 
-class IntegrationHubProvider(IntegrationHubProvidesData, IntegrationHubProvidesEventHandlers):
+class IntegrationHubProvider(IntegrationHubProviderData, IntegrationHubProviderEventHandlers):
     """Provider-side of the Integration Hub relation."""
 
     def __init__(self, charm: CharmBase, relation_name: str) -> None:
-        IntegrationHubProvidesData.__init__(self, charm.model, relation_name)
-        IntegrationHubProvidesEventHandlers.__init__(self, charm, self)
+        IntegrationHubProviderData.__init__(self, charm.model, relation_name)
+        IntegrationHubProviderEventHandlers.__init__(self, charm, self)
 
 
-class IntegrationHubRequiresData(RequirerData):
+class IntegrationHubRequirerData(RequirerData):
     """Requirer-side of the Integration Hub relation."""
 
     def __init__(
@@ -253,11 +253,11 @@ class IntegrationHubRequiresData(RequirerData):
 
 
 class IntegrationHubRequirerEventHandlers(RequirerEventHandlers):
-    """Requires-side of the Integration Hub relation."""
+    """Requirer-side of the Integration Hub relation."""
 
-    on = IntegrationHubRequiresEvents()  # pyright: ignore [reportAssignmentType]
+    on = IntegrationHubRequirerEvents()  # pyright: ignore [reportAssignmentType]
 
-    def __init__(self, charm: CharmBase, relation_data: IntegrationHubRequiresData) -> None:
+    def __init__(self, charm: CharmBase, relation_data: IntegrationHubRequirerData) -> None:
         super().__init__(charm, relation_data)
         # Just to keep lint quiet, can't resolve inheritance. The same happened in super().__init__() above
         self.relation_data = relation_data
@@ -275,7 +275,8 @@ class IntegrationHubRequirerEventHandlers(RequirerEventHandlers):
 
         # Sets service_account, namespace in the relation
         relation_data = {
-            f: getattr(self, f.replace("-", "_"), "") for f in ["service-account", "namespace"]
+            f: getattr(self.relation_data, f.replace("-", "_"), "")
+            for f in ["service-account", "namespace"]
         }
 
         self.relation_data.update_relation_data(event.relation.id, relation_data)
@@ -311,7 +312,7 @@ class IntegrationHubRequirerEventHandlers(RequirerEventHandlers):
         getattr(self.on, "account_gone").emit(event.relation, app=event.app, unit=event.unit)
 
 
-class IntegrationHubRequirer(IntegrationHubRequiresData, IntegrationHubRequirerEventHandlers):
+class IntegrationHubRequirer(IntegrationHubRequirerData, IntegrationHubRequirerEventHandlers):
     """Provider-side of the Integration Hub relation."""
 
     def __init__(
@@ -322,7 +323,7 @@ class IntegrationHubRequirer(IntegrationHubRequiresData, IntegrationHubRequirerE
         namespace: str,
         additional_secret_fields: Optional[List[str]] = [],
     ) -> None:
-        IntegrationHubRequiresData.__init__(
+        IntegrationHubRequirerData.__init__(
             self,
             charm.model,
             relation_name,

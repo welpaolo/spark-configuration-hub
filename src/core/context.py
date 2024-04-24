@@ -79,12 +79,11 @@ class Context(WithLogging):
         Returns:
             List of service accounts/namespaces managed by the Integration Hub
         """
-        service_accounts = []
-        for relation in self.client_relations:
-            if not relation or not relation.app:
-                continue
-            service_accounts.append(ServiceAccount(relation, relation.app))
-        return service_accounts
+        return [
+            ServiceAccount(relation, relation.app)
+            for relation in self.client_relations
+            if not relation or not relation.app
+        ]
 
 
 class Status(Enum):
