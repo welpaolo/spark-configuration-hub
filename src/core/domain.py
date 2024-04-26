@@ -104,3 +104,20 @@ class PushGatewayInfo(StateBase):
                 url = data["url"]
                 return url.replace("https://", "").replace("http://", "")
         return None
+
+
+class ServiceAccount(StateBase):
+    """Class representing the service account managed by the Spark Integration Hub charm."""
+
+    def __init__(self, relation: Relation, component: Application):
+        super().__init__(relation, component)
+
+    @property
+    def service_account(self) -> str | None:
+        """Return service account name."""
+        return self.relation_data.get("service-account", None)
+
+    @property
+    def namespace(self) -> str:
+        """Return the used namespace."""
+        return self.relation_data["namespace"]
